@@ -41,6 +41,15 @@ export default defineComponent({
 		const openSetingsDrawer = () => {
 			setingsRef.value.openDrawer();
 		};
+		// 修正历史缓存中的品牌字段，避免旧缓存把错误名称带回页面
+		const normalizeThemeConfig = (cacheThemeConfig: Record<string, any>) => {
+			return {
+				...cacheThemeConfig,
+				globalTitle: '倚栏听枫',
+				globalViceTitle: '倚栏听枫',
+				wartermarkText: '倚栏听枫',
+			};
+		};
 		// 设置初始化，防止刷新时恢复默认
 		onBeforeMount(() => {
 			// 设置批量第三方 icon 图标
@@ -61,7 +70,9 @@ export default defineComponent({
 				});
 				// 获取缓存中的布局配置
 				if (Local.get('themeConfig')) {
-					storesThemeConfig.setThemeConfig(Local.get('themeConfig'));
+					const cacheThemeConfig = normalizeThemeConfig(Local.get('themeConfig'));
+					storesThemeConfig.setThemeConfig(cacheThemeConfig);
+					Local.set('themeConfig', cacheThemeConfig);
 					document.documentElement.style.cssText = Local.get('themeConfigStyle');
 				}
 				// 获取缓存中的全屏配置

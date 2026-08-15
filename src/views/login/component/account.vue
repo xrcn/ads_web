@@ -32,47 +32,7 @@
         </template>
       </el-input>
     </el-form-item>
-    <el-form-item class="login-animation3" prop="verifyCode">
-      <el-col :span="24">
-        <GoCaptchaBtn
-            class="go-captcha-btn"
-            v-model="checkCaptchaResult"
-            width="100%"
-            height="50px"
-            @handleConfirm="handleVerifyCodeConfirm"
-            v-if="verifyStatus===2"
-        />
-      </el-col>
-      <el-col :span="15" v-if="verifyStatus===1">
-        <el-input
-            type="text"
-            maxlength="4"
-            :placeholder="$t('message.account.accountPlaceholder3')"
-            v-model="ruleForm.verifyCode"
-            clearable
-            autocomplete="off"
-            @keyup.enter="onSignIn"
-        >
-          <template #prefix>
-            <el-icon class="el-input__icon"><ele-Position /></el-icon>
-          </template>
-        </el-input>
-      </el-col>
-      <el-col :span="1" v-if="verifyStatus===1"></el-col>
-      <el-col :span="8" v-if="verifyStatus===1">
-        <div class="login-content-code">
-          <img
-              class="login-content-code-img"
-              @click="getCaptcha"
-              width="130"
-              height="38"
-              :src="captchaSrc"
-              style="cursor: pointer;"
-          />
-        </div>
-      </el-col>
-    </el-form-item>
-    <el-form-item class="login-animation4">
+    <el-form-item class="login-animation3">
       <el-button type="primary" class="login-content-submit" round @click="onSignIn" :loading="loading.signIn">
         <span>{{ $t('message.account.accountBtnText') }}</span>
       </el-button>
@@ -100,8 +60,7 @@ import { initBackEndControlRoutes } from '/@/router/backEnd';
 import { Session } from '/@/utils/storage';
 import { formatAxis } from '/@/utils/formatTime';
 import { NextLoading } from '/@/utils/loading';
-import {captcha, login} from "/@/api/login";
-import GoCaptchaBtn from "/@/components/goCaptcha/GoCaptchaBtn.vue";
+import { login } from "/@/api/login";
 import Websocket from '/@/utils/websocket';
 defineOptions({ name: "loginAccount"})
 const { t } = useI18n();
@@ -111,16 +70,12 @@ const { themeConfig } = storeToRefs(storesThemeConfig);
 const route = useRoute();
 const router = useRouter();
 const loginForm = ref(null)
-const checkCaptchaResult = ref('default')
-const verifyStatus = ref(0)
 const onMessageList = inject<Array<Function>>('onMessageList');
 const state = reactive({
   isShowPassword: false,
   ruleForm: {
     username: 'demo',
     password: '123456',
-    verifyCode: '',
-    verifyKey:''
   },
   formRules:{
     username: [
@@ -133,20 +88,9 @@ const state = reactive({
   loading: {
     signIn: false,
   },
-  captchaSrc:'',
 });
-const { isShowPassword,ruleForm,formRules,loading,captchaSrc} = toRefs(state);
-onMounted(() => {
-  getCaptcha();
-});
-const getCaptcha = () => {
-  // 验证码V1版
-  captcha().then((res:any)=>{
-    state.captchaSrc = res.data.img
-    state.ruleForm.verifyKey = res.data.key
-    verifyStatus.value = res.data.verifyStatus
-  })
-};
+const { isShowPassword,ruleForm,formRules,loading} = toRefs(state);
+onMounted(() => {});
 // 时间获取
 const currentTime = computed(() => {
   return formatAxis(new Date());
@@ -193,11 +137,6 @@ const onSignIn = async () => {
         }
       }).catch(()=>{
         state.loading.signIn = false;
-        state.ruleForm.verifyKey = ''
-        state.ruleForm.verifyCode = ''
-        checkCaptchaResult.value = 'default'
-        // 验证码V1版
-        getCaptcha();
       })
     }
   })
@@ -224,18 +163,13 @@ const signInSuccess = () => {
   // 添加 loading，防止第一次进入界面时出现短暂空白
   NextLoading.start();
 };
-
-const handleVerifyCodeConfirm = (data:{key:string,dots:string})=>{
-  state.ruleForm.verifyCode = data.dots
-  state.ruleForm.verifyKey = data.key
-}
 </script>
 
 
 <style scoped lang="scss">
 .login-content-form {
   margin-top: 20px;
-  @for $i from 1 through 4 {
+  @for $i from 1 through 3 {
     .login-animation#{$i} {
       opacity: 0;
       animation-name: error-num;
@@ -250,26 +184,6 @@ const handleVerifyCodeConfirm = (data:{key:string,dots:string})=>{
     cursor: pointer;
     &:hover {
       color: #909399;
-    }
-  }
-  .login-content-code {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    .login-content-code-img {
-      width: 100%;
-      height: 40px;
-      line-height: 40px;
-      background-color: #ffffff;
-      border: 1px solid rgb(220, 223, 230);
-      cursor: pointer;
-      transition: all ease 0.2s;
-      border-radius: 4px;
-      user-select: none;
-      &:hover {
-        border-color: #c0c4cc;
-        transition: all ease 0.2s;
-      }
     }
   }
   .login-content-submit {

@@ -221,7 +221,7 @@
                   </tr>
                   <tr>
                     <td>
-                      <div class="cell">GFast系统使用:</div>
+                      <div class="cell">倚栏听枫系统使用:</div>
                     </td>
                     <td>
                       <div class="cell">{{ memorySizeFormat(sysInfo.goUsed) }}</div>

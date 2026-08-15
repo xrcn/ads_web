@@ -13,7 +13,7 @@ import { computed, defineComponent } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useThemeConfig } from '/@/stores/themeConfig';
 
-import logoMini from '/@/assets/logo-mini.svg';
+import logoMini from '/@/assets/logo-maple-icon.webp';
 defineOptions({ name: "layoutLogo"})
 const storesThemeConfig = useThemeConfig();
 const { themeConfig } = storeToRefs(storesThemeConfig);
@@ -53,7 +53,10 @@ const onThemeConfigChange = () => {
 		}
 	}
 	&-medium-img {
-		width: 40px;
+		width: 34px;
+		height: 34px;
+		margin-right: 8px;
+		object-fit: contain;
 	}
 }
 .layout-logo-size {
@@ -63,8 +66,10 @@ const onThemeConfigChange = () => {
 	cursor: pointer;
 	animation: logoAnimation 0.3s ease-in-out;
 	&-img {
-		width: 20px;
+		width: 24px;
+		height: 24px;
 		margin: auto;
+		object-fit: contain;
 	}
 	&:hover {
 		img {

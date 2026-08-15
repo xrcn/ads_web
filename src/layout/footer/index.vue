@@ -1,8 +1,8 @@
 <template>
   <div class="layout-footer mt15" v-show="isDelayFooter">
     <div class="layout-footer-warp">
-      <div>Copyright © 2021-2023 g-fast.cn All Rights Reserved.</div>
-      <div class="mt5">云南奇讯科技有限公司版权所有</div>
+      <div>Copyright © 2026 倚栏听枫 All Rights Reserved.</div>
+      <div class="mt5">龙岩市新罗区倚栏听枫文化传媒有限公司</div>
     </div>
   </div>
 </template>

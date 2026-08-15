@@ -265,7 +265,7 @@ export default defineComponent({
 							},
 						},
 						data: [
-							{ name: 'gfastV3', value: 520 },
+							{ name: '倚栏听枫', value: 520 },
 							{ name: 'lyt', value: 520 },
 							{ name: 'next-admin', value: 500 },
 							{ name: '更名', value: 420 },

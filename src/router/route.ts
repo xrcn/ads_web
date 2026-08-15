@@ -47,6 +47,21 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 				},
 			},
 			{
+				path: '/anchor/manage',
+				name: 'anchorManage',
+				component: () => import('/@/views/anchor/manage/index.vue'),
+				meta: {
+					title: '主播管理',
+					isLink: '',
+					isHide: false,
+					isKeepAlive: true,
+					isAffix: false,
+					isIframe: false,
+					roles: ['admin', 'common'],
+					icon: 'ele-UserFilled',
+				},
+			},
+			{
 				path: '/personal',
 				name: 'personals',
 				component: () => import('/@/views/system/personal/index.vue'),
