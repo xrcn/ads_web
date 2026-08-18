@@ -104,15 +104,9 @@ export async function setAddRoute() {
  * @returns 返回后端路由菜单数据
  */
 export async function getBackEndControlRoutes() {
-	let menuRoute = Session.get('userMenu')
-	let permissions = Session.get('permissions')
-	let userInfo = Session.get('userInfo')
-	const hasLegacyDemoMenu = typeof menuRoute === 'string'
-		? menuRoute.includes('/demo')
-		: JSON.stringify(menuRoute || []).includes('/demo');
-	if (!menuRoute || !permissions ||!userInfo || hasLegacyDemoMenu) {
-		await refreshBackEndControlRoutes()
-	}
+	// 菜单、权限、用户信息在本地 Session 中可能已经过期。
+	// 这里在应用初始化时始终向后端刷新一次，避免出现“菜单管理已更新、左侧菜单仍是旧数据”的情况。
+	await refreshBackEndControlRoutes();
 }
 
 /**

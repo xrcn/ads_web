@@ -14,7 +14,7 @@
 					</el-form-item>
 					<el-form-item label="所属厅" prop="hallId">
 						<el-select v-model="query.hallId" placeholder="请选择所属厅" clearable style="width: 220px">
-							<el-option v-for="item in hallOptions" :key="item.deptId" :label="item.deptName" :value="item.deptId" />
+							<el-option v-for="item in hallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" />
 						</el-select>
 					</el-form-item>
 					<el-form-item label="状态" prop="status">

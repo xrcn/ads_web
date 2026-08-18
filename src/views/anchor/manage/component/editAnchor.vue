@@ -46,7 +46,7 @@
 					<el-col :span="12">
 						<el-form-item label="所属厅" prop="hallId">
 							<el-select v-model="form.hallId" placeholder="请选择所属厅" class="w100">
-								<el-option v-for="item in hallOptions" :key="item.deptId" :label="item.deptName" :value="item.deptId" />
+								<el-option v-for="item in hallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" />
 							</el-select>
 						</el-form-item>
 					</el-col>
@@ -59,9 +59,15 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="12" v-if="form.status === 'left'">
+					<el-col :span="12" v-if="form.id || form.status === 'left'">
 						<el-form-item label="离职时间" prop="leaveDate">
-							<el-date-picker v-model="form.leaveDate" type="date" value-format="YYYY-MM-DD" class="w100" />
+							<el-date-picker
+								v-model="form.leaveDate"
+								type="date"
+								value-format="YYYY-MM-DD"
+								class="w100"
+								:disabled="form.status !== 'left'"
+							/>
 						</el-form-item>
 					</el-col>
 					<el-col :span="24">

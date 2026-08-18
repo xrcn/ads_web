@@ -74,8 +74,8 @@ const onMessageList = inject<Array<Function>>('onMessageList');
 const state = reactive({
   isShowPassword: false,
   ruleForm: {
-    username: 'demo',
-    password: '123456',
+    username: '',
+    password: '',
   },
   formRules:{
     username: [

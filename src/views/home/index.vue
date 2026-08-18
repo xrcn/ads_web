@@ -92,7 +92,7 @@ const state = reactive({
     {
       num1: '125,12',
       num2: '-12.32',
-      num3: '订单统计信息',
+      num3: '流水统计信息',
       num4: 'fa fa-meetup',
       color1: '#FF6462',
       color2: '--next-color-primary-lighter',
@@ -101,7 +101,7 @@ const state = reactive({
     {
       num1: '653,33',
       num2: '+42.32',
-      num3: '月度计划信息',
+      num3: '月度流水信息',
       num4: 'iconfont icon-ditu',
       color1: '#6690F9',
       color2: '--next-color-success-lighter',
@@ -110,7 +110,7 @@ const state = reactive({
     {
       num1: '125,65',
       num2: '+17.32',
-      num3: '年度计划信息',
+      num3: '年度流水信息',
       num4: 'iconfont icon-zaosheng',
       color1: '#6690F9',
       color2: '--next-color-warning-lighter',
@@ -119,7 +119,7 @@ const state = reactive({
     {
       num1: '520,43',
       num2: '-10.01',
-      num3: '访问统计信息',
+      num3: '活跃统计信息',
       num4: 'fa fa-github-alt',
       color1: '#FF6462',
       color2: '--next-color-danger-lighter',
@@ -197,26 +197,26 @@ const initLineChart = () => {
   const option = {
     backgroundColor: state.charts.bgColor,
     title: {
-      text: '政策补贴额度',
+      text: '流水测试',
       x: 'left',
       textStyle: { fontSize: '15', color: state.charts.color },
     },
     grid: { top: 70, right: 20, bottom: 30, left: 30 },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['预购队列', '最新成交价'], right: 0 },
+    legend: { data: ['流水队列', '最新流水'], right: 0 },
     xAxis: {
       data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
     },
     yAxis: [
       {
         type: 'value',
-        name: '价格',
+        name: '流水',
         splitLine: { show: true, lineStyle: { type: 'dashed', color: '#f5f5f5' } },
       },
     ],
     series: [
       {
-        name: '预购队列',
+        name: '流水队列',
         type: 'line',
         symbolSize: 6,
         symbol: 'circle',
@@ -232,7 +232,7 @@ const initLineChart = () => {
         },
       },
       {
-        name: '最新成交价',
+        name: '最新流水',
         type: 'line',
         symbolSize: 6,
         symbol: 'circle',
@@ -276,7 +276,7 @@ const initLineChart = () => {
 const initPieChart = () => {
   if (!global.dispose.some((b: any) => b === global.homeChartTwo)) global.homeChartTwo.dispose();
   global.homeChartTwo = <any>echarts.init(homePieRef.value, state.charts.theme);
-  var getname = ['房屋及结构物', '专用设备', '通用设备', '文物和陈列品', '图书、档案'];
+  var getname = ['9731等风来', '8699', '8851', '3366', '8888、9999'];
   var getvalue = [34.2, 38.87, 17.88, 9.05, 2.05];
   var data = [];
   for (var i = 0; i < getname.length; i++) {
@@ -286,7 +286,7 @@ const initPieChart = () => {
   const option = {
     backgroundColor: state.charts.bgColor,
     title: {
-      text: '房屋建筑工程',
+      text: '各厅流水',
       x: 'left',
       textStyle: { fontSize: '15', color: state.charts.color },
     },
@@ -364,12 +364,12 @@ const initBarChart = () => {
   const option = {
     backgroundColor: state.charts.bgColor,
     title: {
-      text: '地热开发利用',
+      text: '主播排档数据',
       x: 'left',
       textStyle: { fontSize: '15', color: state.charts.color },
     },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['供温', '回温', '压力值(Mpa)'], right: 0 },
+    legend: { data: ['A', 'B', 'C(Mpa)'], right: 0 },
     grid: { top: 70, right: 80, bottom: 30, left: 80 },
     xAxis: [
       {
@@ -381,7 +381,7 @@ const initBarChart = () => {
     ],
     yAxis: [
       {
-        name: '供回温度(℃）',
+        name: 'A',
         nameLocation: 'middle',
         nameTextStyle: { padding: [3, 4, 50, 6] },
         splitLine: { show: true, lineStyle: { type: 'dashed', color: '#f5f5f5' } },
@@ -390,7 +390,7 @@ const initBarChart = () => {
         axisLabel: { color: state.charts.color, formatter: '{value} ' },
       },
       {
-        name: '压力值(Mpa)',
+        name: 'C(Mpa)',
         nameLocation: 'middle',
         nameTextStyle: { padding: [50, 4, 5, 6] },
         splitLine: { show: false },
@@ -401,7 +401,7 @@ const initBarChart = () => {
     ],
     series: [
       {
-        name: '供温',
+        name: 'B',
         type: 'line',
         smooth: true,
         showSymbol: true,
@@ -429,7 +429,7 @@ const initBarChart = () => {
         ],
       },
       {
-        name: '回温',
+        name: 'C',
         type: 'line',
         smooth: true,
         showSymbol: true,
@@ -462,7 +462,7 @@ const initBarChart = () => {
         ],
       },
       {
-        name: '压力值(Mpa)',
+        name: 'C(Mpa)',
         type: 'bar',
         barWidth: 30,
         yAxisIndex: 1,

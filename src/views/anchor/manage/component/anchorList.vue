@@ -26,7 +26,6 @@
 					</el-button>
 				</template>
 			</el-table-column>
-			<el-table-column prop="leaveDate" label="离职时间" min-width="110" show-overflow-tooltip />
 			<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
 			<el-table-column label="操作" width="180" fixed="right">
 				<template #default="scope">
