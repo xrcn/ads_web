@@ -62,8 +62,6 @@
 				<el-descriptions-item label="状态">{{ detail.status }}</el-descriptions-item>
 				<el-descriptions-item label="消息内容" :span="2">{{ detail.content }}</el-descriptions-item>
 			</el-descriptions>
-			<div class="detail-title">原始回调</div>
-			<el-input :model-value="formatJson(detail?.rawPayload)" type="textarea" :rows="10" readonly />
 			<div v-for="item in detail?.outbounds || []" :key="item.id">
 				<div class="detail-title">出站响应（{{ item.status }}）</div>
 				<el-input :model-value="formatJson(item.providerResponse)" type="textarea" :rows="8" readonly />
@@ -99,8 +97,14 @@ const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', comman
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
 const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序' }[value] || '-');
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
-const formatJson = (value: string) => { try { return JSON.stringify(JSON.parse(value || '{}'), null, 2); } catch { return value || ''; } };
-
+const formatJson = (value: unknown) => {
+	if (value === null || value === undefined || value === '') return '-';
+	try {
+		return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2);
+	} catch {
+		return String(value);
+	}
+};
 onMounted(() => {
 	getWechatRobotGroupList({ pageNum: 1, pageSize: 1000 }).then((res: any) => { groups.value = res.data.list ?? []; });
 	loadList();

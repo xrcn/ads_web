@@ -208,7 +208,7 @@ export function createWebSocketUrl(
 	}
 
 	// 3. 确定最终使用的 WebSocket 协议
-	const finalProtocol = protocol || (targetUrl.protocol === 'https:' ? 'wss:' : 'ws:');
+	const finalProtocol = protocol || (targetUrl.protocol === 'https:' || targetUrl.protocol === 'wss:' ? 'wss:' : 'ws:');
 
 	// 4. 构建并返回最终的 WebSocket URL
 	// URL.toString() 会自动处理端口号、路径、查询参数等
