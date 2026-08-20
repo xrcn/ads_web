@@ -29,6 +29,7 @@
 			<el-table v-loading="loading" :data="list" border stripe>
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column prop="groupName" label="微信群名称" min-width="160" show-overflow-tooltip />
+				<el-table-column prop="hallNo" label="厅号" min-width="110" show-overflow-tooltip />
 				<el-table-column prop="groupWxid" label="微信群wxid" min-width="180" show-overflow-tooltip />
 				<el-table-column prop="robotName" label="绑定机器人" min-width="140" show-overflow-tooltip />
 				<el-table-column prop="appId" label="机器人appId" min-width="170" show-overflow-tooltip />
@@ -69,6 +70,11 @@
 					<el-col :span="12">
 						<el-form-item label="微信群名称" prop="groupName">
 							<el-input v-model="form.groupName" placeholder="请输入微信群名称" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="12">
+						<el-form-item label="厅号" prop="hallNo">
+							<el-input v-model="form.hallNo" placeholder="未设置时定时播报显示未设置" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="12">
@@ -127,6 +133,7 @@ const createForm = () => ({
 	wechatRobotAccountId: '',
 	groupWxid: '',
 	groupName: '',
+	hallNo: '',
 	status: 1,
 	remark: '',
 });
