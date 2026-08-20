@@ -50,6 +50,14 @@
 				</el-form-item>
 				<el-form-item><span class="form-suffix">开启后仅生产机器人文本发送生效；同一机器人串行随机等待。</span></el-form-item>
 			</el-form>
+			<el-divider content-position="left">群成员同步</el-divider>
+			<el-form :model="configForm" :disabled="!configReady || saving" inline label-width="112px">
+				<el-form-item label="兜底同步间隔">
+					<el-input-number v-model="configForm.memberSyncFallbackIntervalMinutes" :min="30" :max="1440" :step="30" controls-position="right" />
+					<span class="form-suffix">分钟（默认 360 分钟）</span>
+				</el-form-item>
+				<el-form-item><span class="form-suffix">仅同步启用且已绑定机器人的微信群；成员变更回调仍会优先触发同步。</span></el-form-item>
+			</el-form>
 		</el-card>
 
 		<el-row :gutter="15" class="mb15">
@@ -156,6 +164,7 @@ const createConfig = (config: any = {}) => ({
 	sendJitterEnabled: config.sendJitterEnabled ?? 0,
 	sendJitterMinMs: config.sendJitterMinMs ?? 800,
 	sendJitterMaxMs: config.sendJitterMaxMs ?? 1800,
+	memberSyncFallbackIntervalMinutes: config.memberSyncFallbackIntervalMinutes ?? 360,
 });
 
 const configForm = reactive(createConfig());
@@ -250,6 +259,10 @@ const saveConfig = () => {
 	}
 	if (configForm.sendJitterMinMs > configForm.sendJitterMaxMs) {
 		ElMessage.error('最小延迟不能大于最大延迟');
+		return;
+	}
+	if (configForm.memberSyncFallbackIntervalMinutes < 30 || configForm.memberSyncFallbackIntervalMinutes > 1440) {
+		ElMessage.error('成员同步兜底间隔必须在30到1440分钟之间');
 		return;
 	}
 	saving.value = true;

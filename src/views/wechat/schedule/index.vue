@@ -18,9 +18,10 @@
 							<el-form :model="config" label-width="115px" style="max-width: 680px">
 								<el-form-item label="主播麦位数">
 									<el-input-number v-model="config.slotCount" :min="1" :max="8" />
-									<span class="form-tip">默认 8 位；启用 P8 客麦位后固定为 7 个可排主播位。</span>
+									<span class="form-tip">P8 为保留模式时，普通排仅使用 P1-P7。</span>
 								</el-form-item>
-								<el-form-item label="P8 客麦位"><el-switch v-model="guestSlotEnabled" active-text="启用" inactive-text="关闭" /><span class="form-tip">启用后 P1-P7 可排，P8 固定留作客麦位。</span></el-form-item>
+								<el-form-item label="P8 使用方式"><el-radio-group v-model="config.p8Mode"><el-radio label="NORMAL">普通麦位</el-radio><el-radio label="RESERVED">保留麦位</el-radio><el-radio label="TASK_ONLY">仅任务排</el-radio></el-radio-group><span class="form-tip">仅任务排时，只有明确的“金额p8”可占用 P8。</span></el-form-item>
+								<el-form-item v-if="config.p8Mode !== 'NORMAL'" label="P8 名称"><el-input v-model="config.p8Name" maxlength="32" show-word-limit style="width: 260px" placeholder="例如：客麦位、老板位" /></el-form-item>
 								<el-form-item label="运行状态"><el-switch v-model="running" active-text="运行" inactive-text="停止" /></el-form-item>
 								<el-form-item label="任务可否取排"><el-switch v-model="taskTake" active-text="可以取排" inactive-text="不可取排" /></el-form-item>
 								<el-form-item label="发排分钟"><el-input-number v-model="config.scheduleCreateMinute" :min="0" :max="59" /></el-form-item>
@@ -58,14 +59,13 @@ const selectedGroupId = ref<number>();
 const groupOptions = ref<any[]>([]);
 const overview = ref<any>();
 const saving = ref(false);
-const config = reactive({ slotCount: 8, guestSlotEnabled: 0, runningStatus: 1, taskTakeEnabled: 0, queueDocument: '', scheduleCreateMinute: 45, scheduleLockMinute: 58, supplementCloseMinute: 30 });
+const config = reactive({ slotCount: 8, guestSlotEnabled: 0, p8Mode: 'NORMAL', p8Name: '客麦位', runningStatus: 1, taskTakeEnabled: 0, queueDocument: '', scheduleCreateMinute: 45, scheduleLockMinute: 58, supplementCloseMinute: 30 });
 const running = computed({ get: () => config.runningStatus === 1, set: (value: boolean) => (config.runningStatus = value ? 1 : 0) });
 const taskTake = computed({ get: () => config.taskTakeEnabled === 1, set: (value: boolean) => (config.taskTakeEnabled = value ? 1 : 0) });
-const guestSlotEnabled = computed({ get: () => config.guestSlotEnabled === 1, set: (value: boolean) => { config.guestSlotEnabled = value ? 1 : 0; if (value && config.slotCount === 8) config.slotCount = 7; } });
 const emptySlots = Array.from({ length: 8 }, (_, index) => ({ slotNo: index + 1, memberName: '', entryType: '', taskAmount: '' }));
 
 const slotLabel = (slot: any) => {
-	if (slot.isGuestSlot) return '不参与机器人排麦';
+	if (slot.isGuestSlot) return config.p8Mode === 'TASK_ONLY' ? '仅任务排可占用' : '不参与机器人排麦';
 	if (!slot.memberName) return '暂无排档';
 	if (slot.entryType === 'TASK') return `任务 ${slot.taskAmount || ''}`;
 	if (slot.entryType === 'FIXED') return '固定档';
@@ -78,12 +78,15 @@ const loadOverview = () => {
 	getWechatGroupScheduleOverview(selectedGroupId.value).then((res: any) => {
 		overview.value = res.data;
 		Object.assign(config, res.data);
+		config.guestSlotEnabled = config.p8Mode === 'NORMAL' ? 0 : 1;
 	});
 };
 
 const saveConfig = () => {
 	if (!selectedGroupId.value) return;
 	saving.value = true;
+	config.guestSlotEnabled = config.p8Mode === 'NORMAL' ? 0 : 1;
+	if (config.p8Mode !== 'NORMAL') config.slotCount = 7;
 	saveWechatGroupScheduleConfig({ groupId: selectedGroupId.value, ...config }).then(() => {
 		ElMessage.success('群规则已保存');
 		loadOverview();

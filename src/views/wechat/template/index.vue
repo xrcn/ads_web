@@ -46,21 +46,22 @@
 				<el-form-item label="回复场景" required>
 					<el-tabs v-model="activeEventKey" class="scenario-tabs w100">
 						<el-tab-pane v-for="scenario in form.scenarios" :key="scenario.eventKey" :name="scenario.eventKey" :label="scenario.eventName">
-							<el-form-item label="回复模板" label-width="90px" required><el-input v-model="scenario.content" type="textarea" :rows="8" placeholder="请输入回复模板" /></el-form-item>
+							<el-form-item label="回复模板" label-width="90px" required><el-input :ref="(input) => registerTemplateInput(scenario.eventKey, input)" v-model="scenario.content" type="textarea" :rows="8" placeholder="请输入回复模板" /></el-form-item>
 							<el-form-item label="状态" label-width="90px"><el-switch v-model="scenario.status" :active-value="1" :inactive-value="0" /></el-form-item>
-							<el-form-item label="可用变量" label-width="90px"><el-tag v-for="item in scenario.variables || []" :key="item" class="mr8">{{ variableToken(item) }}</el-tag><span v-if="!scenario.variables?.length" class="text-info">无</span></el-form-item>
+							<el-form-item label="全部变量" label-width="90px" class="variable-catalog"><el-tooltip v-for="item in variableCatalog" :key="item.name" :content="variableTooltip(scenario, item)" placement="top"><el-tag :class="['variable-tag', { 'variable-tag-unavailable': !isVariableAvailable(scenario, item.name) }]" :type="isVariableAvailable(scenario, item.name) ? 'primary' : 'info'" @click="insertVariable(scenario, item)">{{ variableToken(item.name) }} {{ item.label }}</el-tag></el-tooltip><span v-if="!variableCatalog.length" class="text-info">暂无变量目录</span></el-form-item>
+							<el-form-item v-if="scenarioVariableErrors.get(scenario.eventKey)?.length" label="变量错误" label-width="90px"><div class="variable-errors"><div v-for="error in scenarioVariableErrors.get(scenario.eventKey)" :key="error.name">{{ error.message }}</div></div></el-form-item>
 						</el-tab-pane>
 					</el-tabs>
 				</el-form-item>
 				<el-form-item label="预览"><div class="preview-box">{{ previewContent || '选择场景后点击“预览”查看效果' }}</div></el-form-item>
 			</el-form>
-			<template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button @click="preview">预览当前场景</el-button><el-button type="primary" :loading="saving" @click="submit">保存全部场景</el-button></template>
+			<template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button :disabled="Boolean(currentScenario && scenarioVariableErrors.get(currentScenario.eventKey)?.length)" @click="preview">预览当前场景</el-button><el-button type="primary" :loading="saving" :disabled="hasVariableErrors" @click="submit">保存全部场景</el-button></template>
 		</el-dialog>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
@@ -80,6 +81,8 @@ defineOptions({ name: 'wechatMessageTemplate' });
 
 type TemplateScenario = { id: number; eventKey: string; eventName: string; content: string; status: number; variables: string[] };
 type CommandOption = { commandKey: string; commandName: string; triggerKind: string; scenarios: TemplateScenario[] };
+type TemplateVariable = { name: string; label: string; description: string; example: string };
+type VariableError = { name: string; message: string };
 
 const formRef = ref<FormInstance>();
 const loading = ref(false);
@@ -89,6 +92,7 @@ const dialogTitle = ref('新增群私有模板');
 const list = ref<any[]>([]);
 const groups = ref<any[]>([]);
 const options = ref<any[]>([]);
+const variableCatalog = ref<TemplateVariable[]>([]);
 const total = ref(0);
 const previewContent = ref('');
 const activeEventKey = ref('');
@@ -97,7 +101,7 @@ const createForm = () => ({ id: 0, groupId: '' as string | number, commandKey: '
 const form = reactive(createForm());
 const rules: FormRules = { groupId: [{ required: true, message: '绑定微信群不能为空', trigger: 'change' }], commandKey: [{ required: true, message: '业务命令不能为空', trigger: 'change' }] };
 
-const scenarioName = (item: any) => ({ QUEUE_SELF_SUCCESS: '手速成功', QUEUE_SELF_SUPPLEMENT_SUCCESS: '补位成功', QUEUE_SELF_ALREADY: '已在麦序', QUEUE_SELF_REJECTED: '排麦失败', TASK_BID_SUCCESS: '任务排成功', TASK_BID_REJECTED: '任务排失败' }[item.eventKey] || item.commandName);
+const scenarioName = (item: any) => ({ QUEUE_SELF_SUCCESS: '手速成功', QUEUE_SELF_SUPPLEMENT_SUCCESS: '补位成功', QUEUE_SELF_ALREADY: '已在麦序', QUEUE_SELF_REJECTED: '排麦失败', TASK_BID_SUCCESS: '任务排成功', TASK_BID_REJECTED: '任务排失败', GROUP_MEMBER_JOIN: '成员入群', GROUP_MEMBER_LEAVE: '成员离群' }[item.eventKey] || item.commandName);
 const commandOptions = computed<CommandOption[]>(() => {
 	const result = new Map<string, CommandOption>();
 	for (const item of options.value) {
@@ -112,10 +116,48 @@ const commandOptions = computed<CommandOption[]>(() => {
 });
 
 const variableToken = (name: string) => `{{${name}}}`;
+const templateVariablePattern = /\{\{([A-Za-z][A-Za-z0-9]*)\}\}/g;
 const currentScenario = computed(() => form.scenarios.find((item) => item.eventKey === activeEventKey.value));
+const isVariableAvailable = (scenario: TemplateScenario, name: string) => scenario.variables?.includes(name) === true;
+const variableErrors = (scenario: TemplateScenario): VariableError[] => {
+	const known = new Set(variableCatalog.value.map((item) => item.name));
+	const names = Array.from(scenario.content.matchAll(templateVariablePattern), (match) => match[1]);
+	return Array.from(new Set(names)).flatMap((name) => {
+		if (!known.has(name)) return [{ name, message: `${variableToken(name)} 系统未定义此模板变量` }];
+		if (!isVariableAvailable(scenario, name)) return [{ name, message: `${variableToken(name)} 当前回复场景不提供此数据` }];
+		return [];
+	});
+};
+const scenarioVariableErrors = computed(() => {
+	const errors = new Map<string, VariableError[]>();
+	for (const scenario of form.scenarios) errors.set(scenario.eventKey, variableErrors(scenario));
+	return errors;
+});
+const hasVariableErrors = computed(() => Array.from(scenarioVariableErrors.value.values()).some((errors) => errors.length > 0));
+const templateInputRefs = new Map<string, { textarea?: HTMLTextAreaElement }>();
+const registerTemplateInput = (eventKey: string, input: any) => {
+	if (input?.textarea) templateInputRefs.set(eventKey, input);
+	else templateInputRefs.delete(eventKey);
+};
+const insertVariable = async (scenario: TemplateScenario, variable: TemplateVariable) => {
+	if (!isVariableAvailable(scenario, variable.name)) return;
+	const token = variableToken(variable.name);
+	const textarea = templateInputRefs.get(scenario.eventKey)?.textarea;
+	if (!textarea) {
+		scenario.content += token;
+		return;
+	}
+	const start = textarea.selectionStart ?? scenario.content.length;
+	const end = textarea.selectionEnd ?? start;
+	scenario.content = `${scenario.content.slice(0, start)}${token}${scenario.content.slice(end)}`;
+	await nextTick();
+	textarea.focus();
+	textarea.setSelectionRange(start + token.length, start + token.length);
+};
+const variableTooltip = (scenario: TemplateScenario, variable: TemplateVariable) => [variable.label, variable.description, `示例：${variable.example}`, !isVariableAvailable(scenario, variable.name) ? '当前回复场景不提供此数据' : ''].filter(Boolean).join('\n');
 const groupStatusMeta = (status: string) => ({ ALL_ENABLED: { label: '全部启用', type: 'success' }, PARTIAL_ENABLED: { label: '部分启用', type: 'warning' }, ALL_DISABLED: { label: '全部停用', type: 'info' } }[status] || { label: status || '-', type: 'info' });
 const loadGroups = () => getWechatRobotGroupList({ pageNum: 1, pageSize: 1000, status: 1 }).then((res: any) => { groups.value = (res.data.list || []).map((item: any) => ({ value: item.id, label: `${item.groupName} (${item.groupWxid})` })); });
-const loadOptions = () => getWechatMessageTemplateOptions().then((res: any) => { options.value = res.data.list || []; });
+const loadOptions = () => getWechatMessageTemplateOptions().then((res: any) => { options.value = res.data.list || []; variableCatalog.value = res.data.variables || []; });
 const loadList = () => { loading.value = true; getWechatMessageTemplateList(query).then((res: any) => { list.value = res.data.list || []; total.value = res.data.total || 0; }).finally(() => { loading.value = false; }); };
 const resetQuery = () => { Object.assign(query, { commandName: '', aliasText: '', groupId: '', scopeType: '', status: '', pageNum: 1, pageSize: 10 }); loadList(); };
 const resetForm = () => { Object.assign(form, createForm()); activeEventKey.value = ''; previewContent.value = ''; formRef.value?.clearValidate(); };
@@ -123,7 +165,7 @@ const openAdd = () => { resetForm(); dialogTitle.value = '新增群私有模板'
 const openEdit = (row: any) => { resetForm(); getWechatMessageTemplateGroupDetail(row.id).then((res: any) => { Object.assign(form, res.data.wechatMessageTemplateCommandGroup || res.data || {}); activeEventKey.value = form.scenarios[0]?.eventKey || ''; dialogTitle.value = form.scopeType === 'PUBLIC' ? '编辑公共模板' : '编辑群私有模板'; dialogVisible.value = true; }); };
 const handleCommandChange = (commandKey: string) => { const option = commandOptions.value.find((item) => item.commandKey === commandKey); if (!option) return; form.commandName = option.commandName; form.triggerKind = option.triggerKind; form.aliases = []; form.scenarios = option.scenarios.map((item) => ({ ...item, variables: [...item.variables] })); activeEventKey.value = form.scenarios[0]?.eventKey || ''; previewContent.value = ''; };
 const preview = () => { const scenario = currentScenario.value; if (!scenario?.content) return; previewWechatMessageTemplate({ eventKey: scenario.eventKey, content: scenario.content }).then((res: any) => { previewContent.value = res.data.content || ''; }); };
-const submit = () => formRef.value?.validate((valid) => { if (!valid) return; if (!form.scenarios.length || form.scenarios.some((item) => !item.content.trim())) { ElMessage.error('所有回复场景的模板内容都不能为空'); return; } saving.value = true; const request = form.id ? editWechatMessageTemplateGroup : addWechatGroupMessageTemplateGroup; request(form).then(() => { ElMessage.success('保存成功'); dialogVisible.value = false; loadList(); }).finally(() => { saving.value = false; }); });
+const submit = () => formRef.value?.validate((valid) => { if (!valid) return; if (hasVariableErrors.value) { ElMessage.error('请先修正模板变量错误'); return; } if (!form.scenarios.length || form.scenarios.some((item) => !item.content.trim())) { ElMessage.error('所有回复场景的模板内容都不能为空'); return; } saving.value = true; const request = form.id ? editWechatMessageTemplateGroup : addWechatGroupMessageTemplateGroup; request(form).then(() => { ElMessage.success('保存成功'); dialogVisible.value = false; loadList(); }).finally(() => { saving.value = false; }); });
 const toggleStatus = (row: any) => changeWechatMessageTemplateGroupStatus({ id: row.id, status: row.status === 'ALL_DISABLED' ? 1 : 0 }).then(() => { ElMessage.success('整组状态已更新'); loadList(); });
 const resetPublic = (row: any) => ElMessageBox.confirm('将恢复该业务命令的全部默认场景与公共口令，确认继续吗？', '提示', { type: 'warning' }).then(() => resetWechatPublicMessageTemplateGroup(row.id)).then(() => { ElMessage.success('已恢复默认'); loadList(); }).catch(() => {});
 const deleteGroup = (row: any) => ElMessageBox.confirm('删除后该群的此业务命令将整体回退公共模板，确认继续吗？', '提示', { type: 'warning' }).then(() => deleteWechatGroupMessageTemplateGroup(row.id)).then(() => { ElMessage.success('已回退公共模板'); loadList(); }).catch(() => {});
@@ -135,4 +177,8 @@ onMounted(() => { loadGroups(); loadOptions(); loadList(); });
 .scenario-table-wrap { padding: 12px 24px; background: var(--el-fill-color-light); }
 .scenario-tabs { min-width: 0; }
 .preview-box { white-space: pre-wrap; min-height: 44px; width: 100%; padding: 10px 12px; border: 1px solid var(--el-border-color); border-radius: 4px; color: var(--el-text-color-regular); background: var(--el-fill-color-lighter); }
+.variable-catalog :deep(.el-form-item__content) { gap: 8px; }
+.variable-tag { cursor: pointer; }
+.variable-tag-unavailable { cursor: not-allowed; opacity: 0.65; }
+.variable-errors { color: var(--el-color-danger); line-height: 1.6; }
 </style>
