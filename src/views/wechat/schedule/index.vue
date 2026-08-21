@@ -23,16 +23,12 @@
 								<el-form-item label="P8 使用方式"><el-radio-group v-model="config.p8Mode"><el-radio label="NORMAL">普通麦位</el-radio><el-radio label="RESERVED">保留麦位</el-radio><el-radio label="TASK_ONLY">仅任务排</el-radio></el-radio-group><span class="form-tip">仅任务排时，只有明确的“金额p8”可占用 P8。</span></el-form-item>
 								<el-form-item v-if="config.p8Mode !== 'NORMAL'" label="P8 名称"><el-input v-model="config.p8Name" maxlength="32" show-word-limit style="width: 260px" placeholder="例如：客麦位、老板位" /></el-form-item>
 								<el-form-item label="运行状态"><el-switch v-model="running" active-text="运行" inactive-text="停止" /></el-form-item>
-								<el-form-item label="任务可否取排"><el-switch v-model="taskTake" active-text="可以取排" inactive-text="不可取排" /></el-form-item>
-								<el-form-item label="发排分钟"><el-input-number v-model="config.scheduleCreateMinute" :min="0" :max="59" /></el-form-item>
-								<el-form-item label="定排分钟"><el-input-number v-model="config.scheduleLockMinute" :min="0" :max="59" /></el-form-item>
-								<el-form-item label="补位截止分钟"><el-input-number v-model="config.supplementCloseMinute" :min="0" :max="59" /></el-form-item>
 								<el-form-item label="群麦序文档"><el-input v-model="config.queueDocument" type="textarea" :rows="4" placeholder="请输入群内发送的麦序文档" /></el-form-item>
 								<el-form-item><el-button type="primary" :loading="saving" :disabled="!selectedGroupId" @click="saveConfig">保存群规则</el-button></el-form-item>
 							</el-form>
 						</el-col>
 						<el-col :xs="24" :lg="10">
-							<div class="timeline-panel"><h4>自动排档时间线</h4><el-timeline><el-timeline-item timestamp=":45" type="primary">先发送上一档汇总，再创建下一小时麦序。</el-timeline-item><el-timeline-item timestamp=":58" type="primary">锁定普通排和任务顶位。</el-timeline-item><el-timeline-item timestamp=":00 - :30" type="primary">普通排按补位处理；30 分钟后停止受理。</el-timeline-item></el-timeline></div>
+							<div class="timeline-panel"><h4>自动排档时间线</h4><el-timeline><el-timeline-item timestamp=":45" type="primary">创建并播报下一档；普通排进入手速。</el-timeline-item><el-timeline-item timestamp=":58 - :59" type="primary">下一档补位，任务排仍可参与。</el-timeline-item><el-timeline-item timestamp=":59" type="primary">结算本档并发送打卡记录。</el-timeline-item><el-timeline-item timestamp="整点" type="primary">有效主持开档并提醒。</el-timeline-item></el-timeline></div>
 						</el-col>
 					</el-row>
 				</el-tab-pane>
@@ -59,9 +55,8 @@ const selectedGroupId = ref<number>();
 const groupOptions = ref<any[]>([]);
 const overview = ref<any>();
 const saving = ref(false);
-const config = reactive({ slotCount: 8, guestSlotEnabled: 0, p8Mode: 'NORMAL', p8Name: '客麦位', runningStatus: 1, taskTakeEnabled: 0, queueDocument: '', scheduleCreateMinute: 45, scheduleLockMinute: 58, supplementCloseMinute: 30 });
+const config = reactive({ slotCount: 8, guestSlotEnabled: 0, p8Mode: 'NORMAL', p8Name: '客麦位', runningStatus: 1, queueDocument: '' });
 const running = computed({ get: () => config.runningStatus === 1, set: (value: boolean) => (config.runningStatus = value ? 1 : 0) });
-const taskTake = computed({ get: () => config.taskTakeEnabled === 1, set: (value: boolean) => (config.taskTakeEnabled = value ? 1 : 0) });
 const emptySlots = Array.from({ length: 8 }, (_, index) => ({ slotNo: index + 1, memberName: '', entryType: '', taskAmount: '' }));
 
 const slotLabel = (slot: any) => {
