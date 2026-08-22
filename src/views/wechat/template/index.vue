@@ -117,11 +117,16 @@ const commandOptions = computed<CommandOption[]>(() => {
 
 const variableToken = (name: string) => `{{${name}}}`;
 const templateVariablePattern = /\{\{([A-Za-z][A-Za-z0-9]*)\}\}/g;
+const templateIfOpenPattern = /\{\{#if ([A-Za-z][A-Za-z0-9]*)\}\}/g;
+const templateControlPattern = /\{\{(?:#if [A-Za-z][A-Za-z0-9]*|\/if)\}\}/g;
 const currentScenario = computed(() => form.scenarios.find((item) => item.eventKey === activeEventKey.value));
 const isVariableAvailable = (scenario: TemplateScenario, name: string) => scenario.variables?.includes(name) === true;
 const variableErrors = (scenario: TemplateScenario): VariableError[] => {
 	const known = new Set(variableCatalog.value.map((item) => item.name));
-	const names = Array.from(scenario.content.matchAll(templateVariablePattern), (match) => match[1]);
+	const names = [
+		...Array.from(scenario.content.replace(templateControlPattern, '').matchAll(templateVariablePattern), (match) => match[1]),
+		...Array.from(scenario.content.matchAll(templateIfOpenPattern), (match) => match[1]),
+	];
 	return Array.from(new Set(names)).flatMap((name) => {
 		if (!known.has(name)) return [{ name, message: `${variableToken(name)} 系统未定义此模板变量` }];
 		if (!isVariableAvailable(scenario, name)) return [{ name, message: `${variableToken(name)} 当前回复场景不提供此数据` }];
