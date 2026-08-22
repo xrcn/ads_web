@@ -58,6 +58,9 @@
 				<el-descriptions-item label="处理时间">{{ detail.processedAt || '-' }}</el-descriptions-item>
 				<el-descriptions-item label="微信群">{{ detail.groupName || detail.groupWxid }}</el-descriptions-item>
 				<el-descriptions-item label="发送者">{{ detail.senderWxid }}</el-descriptions-item>
+				<el-descriptions-item label="实际执行者">{{ detail.actorName || detail.actorWxid || '-' }}</el-descriptions-item>
+				<el-descriptions-item label="授权来源">{{ authoritySourceLabel(detail.actorAuthoritySource) }}</el-descriptions-item>
+				<el-descriptions-item label="代发">{{ detail.delegated ? '是' : '否' }}</el-descriptions-item>
 				<el-descriptions-item label="消息类型">{{ detail.messageType }}</el-descriptions-item>
 				<el-descriptions-item label="状态">{{ detail.status }}</el-descriptions-item>
 				<el-descriptions-item label="消息内容" :span="2">{{ detail.content }}</el-descriptions-item>
@@ -97,6 +100,7 @@ const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', comman
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
 const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序' }[value] || '-');
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
+const authoritySourceLabel = (value: string) => ({ OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
 const formatJson = (value: unknown) => {
 	if (value === null || value === undefined || value === '') return '-';
 	try {

@@ -39,3 +39,43 @@ export function changeWechatRobotGroupStatus(id: number, status: number) {
 		data: { id, status },
 	});
 }
+
+export function getWechatRobotGroupAdmins(groupId: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/adminList',
+		method: 'get',
+		params: { groupId },
+	});
+}
+
+export function saveWechatRobotGroupAdmin(data: { groupId: number; memberWxid: string; memberName: string }) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/adminSave',
+		method: 'post',
+		data,
+	});
+}
+
+export function deleteWechatRobotGroupAdmin(groupId: number, memberWxid: string) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/adminDelete',
+		method: 'delete',
+		data: { groupId, memberWxid },
+	});
+}
+
+export function getWechatRobotGroupQueuePolicy(groupId: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/queuePolicy',
+		method: 'get',
+		params: { groupId },
+	});
+}
+
+export function saveWechatRobotGroupQueuePolicy(groupId: number, adminOnly: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/queuePolicySave',
+		method: 'put',
+		data: { groupId, adminOnly },
+	});
+}

@@ -39,9 +39,10 @@
 					</template>
 				</el-table-column>
 				<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-				<el-table-column label="操作" width="180" fixed="right">
+				<el-table-column label="操作" width="270" fixed="right">
 					<template #default="{ row }">
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/edit'" text type="primary" @click="openEdit(row)">编辑</el-button>
+						<el-button v-auth-all="['api/v1/system/wechatRobotGroup/adminList', 'api/v1/system/wechatRobotGroup/queuePolicy']" text type="primary" @click="openPolicy(row)">管理员与排麦策略</el-button>
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text type="primary" @click="handleToggleStatus(row)">
 							{{ row.status === 1 ? '停用' : '启用' }}
 						</el-button>
@@ -97,6 +98,31 @@
 				<el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
 			</template>
 		</el-dialog>
+
+		<el-dialog v-model="policyVisible" :title="`${currentGroup.groupName || '微信群'}管理员与排麦策略`" width="760px" destroy-on-close>
+			<el-alert title="管理员本人发送普通 p/P/排，仍为本人排麦；普通成员也可临时代发，但仅支持 @完整群昵称 p/P/排。" type="info" :closable="false" show-icon class="mb15" />
+			<el-form :inline="true" label-width="92px" class="mb15">
+				<el-form-item label="仅管理员排麦">
+					<el-switch v-model="queuePolicyAdminOnly" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" />
+				</el-form-item>
+				<el-form-item>
+					<el-button v-auth="'api/v1/system/wechatRobotGroup/queuePolicySave'" type="primary" :loading="policySaving" @click="saveQueuePolicy">保存策略</el-button>
+				</el-form-item>
+			</el-form>
+
+			<el-divider content-position="left">机器人管理员名单</el-divider>
+			<el-form v-auth="'api/v1/system/wechatRobotGroup/adminSave'" :inline="true" :model="adminForm" class="mb15">
+				<el-form-item label="成员 wxid"><el-input v-model="adminForm.memberWxid" placeholder="请输入成员 wxid" style="width: 230px" /></el-form-item>
+				<el-form-item label="群内完整昵称"><el-input v-model="adminForm.memberName" placeholder="用于展示与代发匹配" style="width: 210px" /></el-form-item>
+				<el-form-item><el-button type="primary" :loading="adminSaving" @click="saveAdmin">新增管理员</el-button></el-form-item>
+			</el-form>
+			<el-table v-loading="adminLoading" :data="admins" border stripe max-height="320">
+				<el-table-column type="index" label="序号" width="70" />
+				<el-table-column prop="memberName" label="群内完整昵称" min-width="220"><template #default="{ row }">{{ row.memberName || '-' }}</template></el-table-column>
+				<el-table-column prop="memberWxid" label="成员 wxid" min-width="280" show-overflow-tooltip />
+				<el-table-column label="操作" width="90" fixed="right"><template #default="{ row }"><el-button v-auth="'api/v1/system/wechatRobotGroup/adminDelete'" text type="danger" @click="deleteAdmin(row)">删除</el-button></template></el-table-column>
+			</el-table>
+		</el-dialog>
 	</div>
 </template>
 
@@ -104,7 +130,18 @@
 import { reactive, ref, onMounted } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { addWechatRobotGroup, changeWechatRobotGroupStatus, editWechatRobotGroup, getWechatRobotGroupDetail, getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
+import {
+	addWechatRobotGroup,
+	changeWechatRobotGroupStatus,
+	deleteWechatRobotGroupAdmin,
+	editWechatRobotGroup,
+	getWechatRobotGroupAdmins,
+	getWechatRobotGroupDetail,
+	getWechatRobotGroupList,
+	getWechatRobotGroupQueuePolicy,
+	saveWechatRobotGroupAdmin,
+	saveWechatRobotGroupQueuePolicy,
+} from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
 
 defineOptions({ name: 'wechatRobotGroup' });
@@ -115,6 +152,14 @@ const saving = ref(false);
 const dialogVisible = ref(false);
 const dialogTitle = ref('新增微信群');
 const accountOptions = ref<any[]>([]);
+const policyVisible = ref(false);
+const adminLoading = ref(false);
+const adminSaving = ref(false);
+const policySaving = ref(false);
+const currentGroup = ref({ id: 0, groupName: '' });
+const admins = ref<any[]>([]);
+const queuePolicyAdminOnly = ref(0);
+const adminForm = reactive({ memberWxid: '', memberName: '' });
 
 const query = reactive({
 	groupName: '',
@@ -193,6 +238,77 @@ const openEdit = (row: any) => {
 		Object.assign(form, res.data.wechatRobotGroup || res.data || {});
 		dialogVisible.value = true;
 	});
+};
+
+const loadAdmins = () => {
+	adminLoading.value = true;
+	getWechatRobotGroupAdmins(currentGroup.value.id)
+		.then((res: any) => {
+			admins.value = res.data.list ?? [];
+		})
+		.finally(() => {
+			adminLoading.value = false;
+		});
+};
+
+const loadQueuePolicy = () => {
+	getWechatRobotGroupQueuePolicy(currentGroup.value.id).then((res: any) => {
+		queuePolicyAdminOnly.value = res.data.adminOnly ?? 0;
+	});
+};
+
+const openPolicy = (row: any) => {
+	currentGroup.value = { id: row.id, groupName: row.groupName };
+	admins.value = [];
+	queuePolicyAdminOnly.value = 0;
+	adminForm.memberWxid = '';
+	adminForm.memberName = '';
+	policyVisible.value = true;
+	loadAdmins();
+	loadQueuePolicy();
+};
+
+const saveQueuePolicy = () => {
+	policySaving.value = true;
+	saveWechatRobotGroupQueuePolicy(currentGroup.value.id, queuePolicyAdminOnly.value)
+		.then(() => {
+			ElMessage.success('排麦策略保存成功');
+		})
+		.finally(() => {
+			policySaving.value = false;
+		});
+};
+
+const saveAdmin = () => {
+	if (!adminForm.memberWxid.trim()) {
+		ElMessage.error('成员 wxid 不能为空');
+		return;
+	}
+	adminSaving.value = true;
+	saveWechatRobotGroupAdmin({
+		groupId: currentGroup.value.id,
+		memberWxid: adminForm.memberWxid.trim(),
+		memberName: adminForm.memberName.trim(),
+	})
+		.then(() => {
+			ElMessage.success('管理员保存成功');
+			adminForm.memberWxid = '';
+			adminForm.memberName = '';
+			loadAdmins();
+		})
+		.finally(() => {
+			adminSaving.value = false;
+		});
+};
+
+const deleteAdmin = (row: any) => {
+	ElMessageBox.confirm(`确认删除管理员“${row.memberName || row.memberWxid}”吗？`, '提示', { type: 'warning' })
+		.then(() => deleteWechatRobotGroupAdmin(currentGroup.value.id, row.memberWxid))
+		.then(() => {
+			ElMessage.success('删除成功');
+			loadAdmins();
+		})
+		.catch(() => {});
 };
 
 const submitForm = () => {
