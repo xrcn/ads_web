@@ -1828,6 +1828,14 @@
     appendModuleLog(path, errorText ? undefined : responseBody, merged, errorText)
   }
 
+  function showChatroomMemberListStatus(message, isError) {
+    const el = $('ct-chatroom-member-list-status')
+    if (!el) return
+    el.textContent = message || ''
+    el.hidden = !message
+    el.classList.toggle('hint-error', !!isError)
+  }
+
   /**
    * @param {{ contactsModuleLog?: boolean }} [opts] contactsModuleLog 默认 true；为 false 时不写入 #contacts-module-log-body
    */
@@ -2444,6 +2452,26 @@
     $('btn-contacts-fetch-list')?.addEventListener('click', async () => {
       const res = await post('/contacts/fetchContactsList', {})
       await afterFetchContacts(res)
+    })
+
+    $('btn-contacts-chatroom-member-list')?.addEventListener('click', async () => {
+      const chatroomId = ($('ct-chatroom-member-list-id')?.value || '').trim()
+      if (!chatroomId) {
+        showChatroomMemberListStatus('请填写 chatroomId', true)
+        return
+      }
+      showChatroomMemberListStatus('正在查询群成员…', false)
+      try {
+        const res = await post('/group/getChatroomMemberList', { chatroomId })
+        const body = res?.data || {}
+        if (body.ret !== 200) {
+          showChatroomMemberListStatus('调用失败：' + (body.msg || `WechatApi ret=${body.ret}`), true)
+          return
+        }
+        showChatroomMemberListStatus('调用完成。完整原始 JSON 已写入右侧，可直接导出。', false)
+      } catch (e) {
+        showChatroomMemberListStatus('调用失败：' + (e?.message || String(e)), true)
+      }
     })
 
     $('btn-contacts-search')?.addEventListener('click', async () => {

@@ -557,6 +557,10 @@ button.btn-header-link {
   line-height: 1.5;
 }
 
+.hint-error {
+  color: var(--danger, #d9363e);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

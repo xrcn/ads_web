@@ -546,6 +546,22 @@
                 </div>
 
                 <div class="section-block contacts-api-block">
+                  <h3 class="section-title">获取群成员列表</h3>
+                  <p class="hint">
+                    <strong>POST</strong> <code>/group/getChatroomMemberList</code>。先在顶部选择已有微信机器人，再填写微信群
+                    <code>chatroomId</code>（如 <code>xxx@chatroom</code>）。完整原始 JSON 会保留在右侧，可直接导出。
+                  </p>
+                  <div class="contacts-search-inline">
+                    <label class="field">
+                      <span class="field-label">chatroomId</span>
+                      <input id="ct-chatroom-member-list-id" type="text" placeholder="xxx@chatroom" autocomplete="off" />
+                    </label>
+                    <button type="button" id="btn-contacts-chatroom-member-list" class="btn btn-primary">查询群成员</button>
+                  </div>
+                  <p id="ct-chatroom-member-list-status" class="hint" aria-live="polite" hidden></p>
+                </div>
+
+                <div class="section-block contacts-api-block">
                   <h3 class="section-title">搜索好友</h3>
                   <p class="hint">
                     <strong>POST</strong> <code>/contacts/search</code>。参数 <code>contactsInfo</code>：微信号、手机号等。若已是好友，返回的

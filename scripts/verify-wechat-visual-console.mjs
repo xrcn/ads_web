@@ -42,4 +42,23 @@ if (!app.includes('function hasLoginProfileChanged(profile, account)')) {
 	throw new Error('缺少登录资料差异判断，无法避免重复同步');
 }
 
+if (!html.includes('id="ct-chatroom-member-list-id"') || !html.includes('id="btn-contacts-chatroom-member-list"')) {
+	throw new Error('缺少群成员列表的 chatroomId 输入或调用入口');
+}
+if (!html.includes('id="ct-chatroom-member-list-status"')) {
+	throw new Error('缺少群成员列表的调用状态展示');
+}
+if (!html.includes('id="contacts-module-log-body"') || !html.includes('id="btn-contacts-export-log"')) {
+	throw new Error('群成员列表必须复用原始响应 JSON 展示和导出区');
+}
+if (!modules.includes("$('btn-contacts-chatroom-member-list')?.addEventListener('click'")) {
+	throw new Error('缺少群成员列表调用处理');
+}
+if (!modules.includes("post('/group/getChatroomMemberList', { chatroomId })")) {
+	throw new Error('群成员列表必须通过同源代理提交 chatroomId');
+}
+if (!app.includes("'btn-contacts-chatroom-member-list',")) {
+	throw new Error('未选微信账号时，群成员列表必须由卡片处理并输出错误信息');
+}
+
 console.log(`PASS: ${files.length} resources, 9 sections, ${new Set(paths).size} API paths`);

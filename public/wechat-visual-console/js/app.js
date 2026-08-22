@@ -5,6 +5,7 @@
   const ACCOUNT_OPTION = '<option value="">请选择微信账号</option>'
   const GUARD_EXEMPT_IDS = new Set([
     'btn-account-refresh',
+    'btn-contacts-chatroom-member-list',
     'btn-header-clear-cache',
     'clear-cache-cancel',
     'clear-cache-purge-only',
