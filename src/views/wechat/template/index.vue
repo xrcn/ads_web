@@ -17,6 +17,7 @@
 							<el-table :data="row.scenarios" border size="small">
 								<el-table-column label="回复场景" width="180"><template #default="scope"><span>{{ scenarioLabel(scope.row) }}</span><el-tag v-if="isLegacyScenario(scope.row.eventKey)" size="small" type="info" class="legacy-tag">遗留模板</el-tag></template></el-table-column>
 								<el-table-column prop="eventKey" label="事件编码" min-width="210" />
+								<el-table-column label="触发规则" min-width="170"><template #default="scope">{{ scope.row.triggerDescription || '-' }}</template></el-table-column>
 								<el-table-column prop="content" label="回复模板" min-width="360" show-overflow-tooltip />
 								<el-table-column label="状态" width="90" align="center"><template #default="scope"><el-tag :type="scope.row.status === 1 ? 'success' : 'info'">{{ scope.row.status === 1 ? '启用' : '停用' }}</el-tag></template></el-table-column>
 								<el-table-column prop="updatedAt" label="更新时间" width="170" />
@@ -26,7 +27,7 @@
 				</el-table-column>
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column prop="commandName" label="命令名称" min-width="130" />
-				<el-table-column label="触发口令" min-width="180"><template #default="{ row }"><span v-if="row.triggerKind === 'AUTO'">定时触发</span><span v-else>{{ row.aliases?.join(' / ') || '沿用公共口令' }}</span></template></el-table-column>
+				<el-table-column label="触发/命令" min-width="180"><template #default="{ row }"><span v-if="row.triggerKind === 'AUTO'">{{ row.triggerDescription || '自动触发' }}</span><span v-else>{{ compactCommandUsage(row.commandUsage) }}</span></template></el-table-column>
 				<el-table-column label="场景数量" width="100" align="center"><template #default="{ row }">{{ row.scenarios?.length || 0 }}</template></el-table-column>
 				<el-table-column label="类型" width="100" align="center"><template #default="{ row }"><el-tag :type="row.scopeType === 'PUBLIC' ? 'success' : 'warning'">{{ row.scopeType === 'PUBLIC' ? '公共' : '群私有' }}</el-tag></template></el-table-column>
 				<el-table-column label="状态" width="110" align="center"><template #default="{ row }"><el-tag :type="groupStatusMeta(row.status).type">{{ groupStatusMeta(row.status).label }}</el-tag></template></el-table-column>
@@ -42,7 +43,9 @@
 				<el-form-item v-if="form.scopeType === 'GROUP' && !form.id" label="绑定微信群" prop="groupId"><el-select v-model="form.groupId" filterable class="w100" placeholder="请选择微信群"><el-option v-for="item in groups" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
 				<el-form-item v-if="form.scopeType === 'GROUP' && !form.id" label="业务命令" prop="commandKey"><el-select v-model="form.commandKey" filterable class="w100" placeholder="请选择业务命令" @change="handleCommandChange"><el-option v-for="item in commandOptions" :key="item.commandKey" :label="item.commandName" :value="item.commandKey" /></el-select></el-form-item>
 				<el-form-item label="命令名称"><el-input :model-value="form.commandName" disabled /></el-form-item>
-				<el-form-item label="触发口令"><el-select v-if="form.triggerKind !== 'AUTO'" v-model="form.aliases" multiple filterable allow-create default-first-option class="w100" placeholder="例如 p、P、排档" /><span v-else class="text-info">定时触发，不支持口令配置</span></el-form-item>
+				<el-form-item v-if="currentScenario?.triggerDescription || form.triggerDescription" label="触发规则"><span class="text-info">{{ currentScenario?.triggerDescription || form.triggerDescription }}</span></el-form-item>
+				<el-form-item v-if="form.commandUsage" label="命令格式"><div class="command-usage">{{ form.commandUsage }}</div></el-form-item>
+				<el-form-item label="触发口令"><el-select v-if="form.triggerKind !== 'AUTO'" v-model="form.aliases" multiple filterable allow-create default-first-option class="w100" placeholder="例如 p、P、排档" /><span v-else class="text-info">自动事件不支持口令配置</span></el-form-item>
 				<el-form-item label="回复场景" required>
 					<el-tabs v-model="activeEventKey" class="scenario-tabs w100">
 						<el-tab-pane v-for="scenario in form.scenarios" :key="scenario.eventKey" :name="scenario.eventKey" :label="scenarioLabel(scenario)">
@@ -79,8 +82,8 @@ import {
 
 defineOptions({ name: 'wechatMessageTemplate' });
 
-type TemplateScenario = { id: number; eventKey: string; eventName: string; content: string; status: number; variables: string[] };
-type CommandOption = { commandKey: string; commandName: string; triggerKind: string; scenarios: TemplateScenario[] };
+type TemplateScenario = { id: number; eventKey: string; eventName: string; triggerDescription: string; content: string; status: number; variables: string[] };
+type CommandOption = { commandKey: string; commandName: string; triggerKind: string; triggerDescription: string; commandUsage: string; scenarios: TemplateScenario[] };
 type TemplateVariable = { name: string; label: string; description: string; example: string };
 type VariableError = { name: string; message: string };
 
@@ -97,7 +100,7 @@ const total = ref(0);
 const previewContent = ref('');
 const activeEventKey = ref('');
 const query = reactive({ commandName: '', aliasText: '', groupId: '' as string | number, scopeType: '', status: '', pageNum: 1, pageSize: 10 });
-const createForm = () => ({ id: 0, groupId: '' as string | number, commandKey: '', commandName: '', triggerKind: 'COMMAND', scopeType: 'GROUP', aliases: [] as string[], scenarios: [] as TemplateScenario[] });
+const createForm = () => ({ id: 0, groupId: '' as string | number, commandKey: '', commandName: '', triggerKind: 'COMMAND', triggerDescription: '', commandUsage: '', scopeType: 'GROUP', aliases: [] as string[], scenarios: [] as TemplateScenario[] });
 const form = reactive(createForm());
 const rules: FormRules = { groupId: [{ required: true, message: '绑定微信群不能为空', trigger: 'change' }], commandKey: [{ required: true, message: '业务命令不能为空', trigger: 'change' }] };
 
@@ -118,15 +121,19 @@ const commandOptions = computed<CommandOption[]>(() => {
 	for (const item of options.value) {
 		let command = result.get(item.commandKey);
 		if (!command) {
-			command = { commandKey: item.commandKey, commandName: item.commandName, triggerKind: item.triggerKind, scenarios: [] };
+			command = { commandKey: item.commandKey, commandName: item.commandName, triggerKind: item.triggerKind, triggerDescription: item.triggerDescription, commandUsage: item.commandUsage, scenarios: [] };
 			result.set(item.commandKey, command);
+		} else if (command.triggerKind !== item.triggerKind) {
+			command.triggerKind = 'COMMAND';
+			command.triggerDescription = '';
 		}
-		command.scenarios.push({ id: 0, eventKey: item.eventKey, eventName: scenarioName(item), content: item.defaultContent, status: 1, variables: item.variables || [] });
+		command.scenarios.push({ id: 0, eventKey: item.eventKey, eventName: scenarioName(item), triggerDescription: item.triggerDescription, content: item.defaultContent, status: 1, variables: item.variables || [] });
 	}
 	return Array.from(result.values()).sort((left, right) => left.commandName.localeCompare(right.commandName, 'zh-CN'));
 });
 
 const variableToken = (name: string) => `{{${name}}}`;
+const compactCommandUsage = (usage: string) => usage.replace(/\n/g, '↵');
 const templateVariablePattern = /\{\{([A-Za-z][A-Za-z0-9]*)\}\}/g;
 const templateIfOpenPattern = /\{\{#if ([A-Za-z][A-Za-z0-9]*)\}\}/g;
 const templateControlPattern = /\{\{(?:#if [A-Za-z][A-Za-z0-9]*|\/if)\}\}/g;
@@ -179,7 +186,7 @@ const resetQuery = () => { Object.assign(query, { commandName: '', aliasText: ''
 const resetForm = () => { Object.assign(form, createForm()); activeEventKey.value = ''; previewContent.value = ''; formRef.value?.clearValidate(); };
 const openAdd = () => { resetForm(); dialogTitle.value = '新增群私有模板'; dialogVisible.value = true; };
 const openEdit = (row: any) => { resetForm(); getWechatMessageTemplateGroupDetail(row.id).then((res: any) => { Object.assign(form, res.data.wechatMessageTemplateCommandGroup || res.data || {}); activeEventKey.value = form.scenarios[0]?.eventKey || ''; dialogTitle.value = form.scopeType === 'PUBLIC' ? '编辑公共模板' : '编辑群私有模板'; dialogVisible.value = true; }); };
-const handleCommandChange = (commandKey: string) => { const option = commandOptions.value.find((item) => item.commandKey === commandKey); if (!option) return; form.commandName = option.commandName; form.triggerKind = option.triggerKind; form.aliases = []; form.scenarios = option.scenarios.map((item) => ({ ...item, variables: [...item.variables] })); activeEventKey.value = form.scenarios[0]?.eventKey || ''; previewContent.value = ''; };
+const handleCommandChange = (commandKey: string) => { const option = commandOptions.value.find((item) => item.commandKey === commandKey); if (!option) return; form.commandName = option.commandName; form.triggerKind = option.triggerKind; form.triggerDescription = option.triggerDescription; form.commandUsage = option.commandUsage; form.aliases = []; form.scenarios = option.scenarios.map((item) => ({ ...item, variables: [...item.variables] })); activeEventKey.value = form.scenarios[0]?.eventKey || ''; previewContent.value = ''; };
 const preview = () => { const scenario = currentScenario.value; if (!scenario?.content) return; previewWechatMessageTemplate({ eventKey: scenario.eventKey, content: scenario.content }).then((res: any) => { previewContent.value = res.data.content || ''; }); };
 const submit = () => formRef.value?.validate((valid) => { if (!valid) return; if (hasVariableErrors.value) { ElMessage.error('请先修正模板变量错误'); return; } if (!form.scenarios.length || form.scenarios.some((item) => !item.content.trim())) { ElMessage.error('所有回复场景的模板内容都不能为空'); return; } saving.value = true; const request = form.id ? editWechatMessageTemplateGroup : addWechatGroupMessageTemplateGroup; request(form).then(() => { ElMessage.success('保存成功'); dialogVisible.value = false; loadList(); }).finally(() => { saving.value = false; }); });
 const toggleStatus = (row: any) => changeWechatMessageTemplateGroupStatus({ id: row.id, status: row.status === 'ALL_DISABLED' ? 1 : 0 }).then(() => { ElMessage.success('整组状态已更新'); loadList(); });
@@ -193,6 +200,7 @@ onMounted(() => { loadGroups(); loadOptions(); loadList(); });
 .scenario-table-wrap { padding: 12px 24px; background: var(--el-fill-color-light); }
 .scenario-tabs { min-width: 0; }
 .preview-box { white-space: pre-wrap; min-height: 44px; width: 100%; padding: 10px 12px; border: 1px solid var(--el-border-color); border-radius: 4px; color: var(--el-text-color-regular); background: var(--el-fill-color-lighter); }
+.command-usage { white-space: pre-wrap; }
 .variable-catalog :deep(.el-form-item__content) { gap: 8px; }
 .variable-tag { cursor: pointer; }
 .variable-tag-unavailable { cursor: not-allowed; opacity: 0.65; }
