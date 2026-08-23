@@ -28,12 +28,12 @@
 
 			<el-table v-loading="loading" :data="list" border stripe row-key="id" @expand-change="handleMemberExpand">
 				<el-table-column type="index" label="序号" width="70" />
-				<el-table-column type="expand" width="52">
+				<el-table-column v-if="canListMembers" type="expand" width="52">
 					<template #default="{ row }">
 						<div class="group-member-panel">
 							<div class="group-member-toolbar">
 								<el-switch v-model="memberPanel(row).includeLeft" active-text="包含已离群成员" @change="loadMembers(row, true)" />
-								<el-button v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1" @click="syncMembers(row)">立即同步</el-button>
+								<el-button v-if="canSyncMembers" v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1 || row.accountStatus !== 1" @click="syncMembers(row)">立即同步</el-button>
 								<span>最近成功同步：{{ memberPanel(row).lastSuccessfulSyncAt || '-' }}</span>
 							</div>
 							<el-alert v-if="memberPanel(row).error" :title="memberPanel(row).error" type="error" show-icon :closable="false" class="mb10" />
@@ -172,6 +172,7 @@ import {
 	syncWechatRobotGroupMembers,
 } from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
+import { auth } from '/@/utils/authFunction';
 
 defineOptions({ name: 'wechatRobotGroup' });
 
@@ -190,6 +191,8 @@ const admins = ref<any[]>([]);
 const queuePolicyAdminOnly = ref(0);
 const adminForm = reactive({ memberWxid: '', memberName: '' });
 const memberPanels = reactive<Record<number, any>>({});
+const canListMembers = auth('api/v1/system/wechatRobotGroup/memberList');
+const canSyncMembers = auth('api/v1/system/wechatRobotGroup/memberSync');
 
 const query = reactive({
 	groupName: '',
@@ -253,6 +256,7 @@ const memberPanel = (row: any) => {
 };
 
 const loadMembers = (row: any, force = false) => {
+	if (!canListMembers) return;
 	const panel = memberPanel(row);
 	if (panel.loaded && !force) return;
 	panel.loading = true;
@@ -272,6 +276,7 @@ const loadMembers = (row: any, force = false) => {
 };
 
 const handleMemberExpand = (row: any, expandedRows: any[]) => {
+	if (!canListMembers) return;
 	if (expandedRows.some((item) => item.id === row.id)) loadMembers(row);
 };
 
