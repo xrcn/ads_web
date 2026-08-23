@@ -79,3 +79,19 @@ export function saveWechatRobotGroupQueuePolicy(groupId: number, adminOnly: numb
 		data: { groupId, adminOnly },
 	});
 }
+
+export function getWechatRobotGroupMemberList(groupId: number, includeLeft: boolean) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/memberList',
+		method: 'get',
+		params: { groupId, includeLeft },
+	});
+}
+
+export function syncWechatRobotGroupMembers(groupId: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/memberSync',
+		method: 'post',
+		data: { groupId },
+	});
+}

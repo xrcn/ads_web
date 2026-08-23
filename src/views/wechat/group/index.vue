@@ -26,8 +26,35 @@
 				</el-form-item>
 			</el-form>
 
-			<el-table v-loading="loading" :data="list" border stripe>
+			<el-table v-loading="loading" :data="list" border stripe row-key="id" @expand-change="handleMemberExpand">
 				<el-table-column type="index" label="序号" width="70" />
+				<el-table-column type="expand" width="52">
+					<template #default="{ row }">
+						<div class="group-member-panel">
+							<div class="group-member-toolbar">
+								<el-switch v-model="memberPanel(row).includeLeft" active-text="包含已离群成员" @change="loadMembers(row, true)" />
+								<el-button v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1" @click="syncMembers(row)">立即同步</el-button>
+								<span>最近成功同步：{{ memberPanel(row).lastSuccessfulSyncAt || '-' }}</span>
+							</div>
+							<el-alert v-if="memberPanel(row).error" :title="memberPanel(row).error" type="error" show-icon :closable="false" class="mb10" />
+							<el-alert v-if="memberPanel(row).result" :title="memberPanel(row).result" type="success" show-icon :closable="false" class="mb10" />
+							<el-table v-loading="memberPanel(row).loading" :data="memberPanel(row).list" border stripe max-height="420">
+								<el-table-column label="头像" width="78" align="center"><template #default="{ row: member }"><el-avatar :size="34" :src="member.smallHeadImgUrl || member.bigHeadImgUrl">-</el-avatar></template></el-table-column>
+								<el-table-column prop="displayName" label="群昵称" min-width="140"><template #default="{ row: member }">{{ member.displayName || '-' }}</template></el-table-column>
+								<el-table-column prop="nickName" label="微信昵称" min-width="140"><template #default="{ row: member }">{{ member.nickName || '-' }}</template></el-table-column>
+								<el-table-column prop="wxid" label="wxid" min-width="180" show-overflow-tooltip />
+								<el-table-column prop="inviterUserName" label="邀请人" min-width="150"><template #default="{ row: member }">{{ member.inviterUserName || '-' }}</template></el-table-column>
+								<el-table-column prop="memberFlag" label="memberFlag" width="110" />
+								<el-table-column label="角色" min-width="180"><template #default="{ row: member }"><el-tag v-for="role in member.roles" :key="role" class="mr5">{{ role }}</el-tag><span v-if="!member.roles?.length">-</span></template></el-table-column>
+								<el-table-column label="在群状态" width="105"><template #default="{ row: member }"><el-tag :type="member.isPresent ? 'success' : 'info'">{{ member.isPresent ? '在群' : '已离群' }}</el-tag></template></el-table-column>
+								<el-table-column prop="firstSeenAt" label="首次同步发现" min-width="170" />
+								<el-table-column prop="lastSeenAt" label="最近同步" min-width="170" />
+								<el-table-column prop="leftAt" label="离群时间" min-width="170"><template #default="{ row: member }">{{ member.leftAt || '-' }}</template></el-table-column>
+								<el-table-column prop="joinEventAt" label="入群事件时间" min-width="170"><template #default="{ row: member }">{{ member.joinEventAt || '-' }}</template></el-table-column>
+							</el-table>
+						</div>
+					</template>
+				</el-table-column>
 				<el-table-column prop="groupName" label="微信群名称" min-width="160" show-overflow-tooltip />
 				<el-table-column prop="hallNo" label="厅号" min-width="110" show-overflow-tooltip />
 				<el-table-column prop="groupWxid" label="微信群wxid" min-width="180" show-overflow-tooltip />
@@ -138,9 +165,11 @@ import {
 	getWechatRobotGroupAdmins,
 	getWechatRobotGroupDetail,
 	getWechatRobotGroupList,
+	getWechatRobotGroupMemberList,
 	getWechatRobotGroupQueuePolicy,
 	saveWechatRobotGroupAdmin,
 	saveWechatRobotGroupQueuePolicy,
+	syncWechatRobotGroupMembers,
 } from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
 
@@ -160,6 +189,7 @@ const currentGroup = ref({ id: 0, groupName: '' });
 const admins = ref<any[]>([]);
 const queuePolicyAdminOnly = ref(0);
 const adminForm = reactive({ memberWxid: '', memberName: '' });
+const memberPanels = reactive<Record<number, any>>({});
 
 const query = reactive({
 	groupName: '',
@@ -212,6 +242,56 @@ const loadList = () => {
 		})
 		.finally(() => {
 			loading.value = false;
+		});
+};
+
+const memberPanel = (row: any) => {
+	if (!memberPanels[row.id]) {
+		memberPanels[row.id] = { includeLeft: false, loading: false, syncing: false, list: [], error: '', result: '', loaded: false, lastSuccessfulSyncAt: '' };
+	}
+	return memberPanels[row.id];
+};
+
+const loadMembers = (row: any, force = false) => {
+	const panel = memberPanel(row);
+	if (panel.loaded && !force) return;
+	panel.loading = true;
+	panel.error = '';
+	getWechatRobotGroupMemberList(row.id, panel.includeLeft)
+		.then((res: any) => {
+			panel.list = res.data.list ?? [];
+			panel.lastSuccessfulSyncAt = res.data.lastSuccessfulSyncAt ?? '';
+			panel.loaded = true;
+		})
+		.catch((error: any) => {
+			panel.error = error?.message || '加载本地成员列表失败';
+		})
+		.finally(() => {
+			panel.loading = false;
+		});
+};
+
+const handleMemberExpand = (row: any, expandedRows: any[]) => {
+	if (expandedRows.some((item) => item.id === row.id)) loadMembers(row);
+};
+
+const syncMembers = (row: any) => {
+	const panel = memberPanel(row);
+	panel.syncing = true;
+	panel.error = '';
+	panel.result = '';
+	syncWechatRobotGroupMembers(row.id)
+		.then((res: any) => {
+			const result = res.data || {};
+			panel.result = `同步成功，当前成员 ${result.memberCount ?? 0} 人`;
+			panel.loaded = false;
+			loadMembers(row, true);
+		})
+		.catch((error: any) => {
+			panel.error = error?.message || '同步失败，已保留原成员快照';
+		})
+		.finally(() => {
+			panel.syncing = false;
 		});
 };
 
@@ -345,3 +425,8 @@ onMounted(() => {
 	loadList();
 });
 </script>
+
+<style scoped>
+.group-member-panel { padding: 12px 20px; }
+.group-member-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+</style>
