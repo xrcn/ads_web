@@ -95,3 +95,19 @@ export function syncWechatRobotGroupMembers(groupId: number) {
 		data: { groupId },
 	});
 }
+
+export function getWechatRobotGroupFixedSchedule(groupId: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/fixedSchedule',
+		method: 'get',
+		params: { groupId },
+	});
+}
+
+export function saveWechatRobotGroupFixedSchedule(groupId: number, enabled: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/fixedScheduleSave',
+		method: 'put',
+		data: { groupId, enabled },
+	});
+}

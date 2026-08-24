@@ -65,6 +65,12 @@
 						<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
 					</template>
 				</el-table-column>
+				<el-table-column v-if="canReadFixedSchedule" label="固定档" width="150" align="center">
+					<template #default="{ row }">
+						<el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" />
+						<el-tag v-else :type="row.fixedScheduleEnabled === 1 ? 'success' : 'info'">{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
 				<el-table-column label="操作" width="270" fixed="right">
 					<template #default="{ row }">
@@ -166,9 +172,11 @@ import {
 	getWechatRobotGroupDetail,
 	getWechatRobotGroupList,
 	getWechatRobotGroupMemberList,
+	getWechatRobotGroupFixedSchedule,
 	getWechatRobotGroupQueuePolicy,
 	saveWechatRobotGroupAdmin,
 	saveWechatRobotGroupQueuePolicy,
+	saveWechatRobotGroupFixedSchedule,
 	syncWechatRobotGroupMembers,
 } from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
@@ -193,6 +201,9 @@ const adminForm = reactive({ memberWxid: '', memberName: '' });
 const memberPanels = reactive<Record<number, any>>({});
 const canListMembers = auth('api/v1/system/wechatRobotGroup/memberList');
 const canSyncMembers = auth('api/v1/system/wechatRobotGroup/memberSync');
+const canReadFixedSchedule = auth('api/v1/system/wechatRobotGroup/fixedSchedule');
+const canSaveFixedSchedule = auth('api/v1/system/wechatRobotGroup/fixedScheduleSave');
+const fixedScheduleSaving = reactive<Record<number, boolean>>({});
 
 const query = reactive({
 	groupName: '',
@@ -298,6 +309,26 @@ const syncMembers = (row: any) => {
 		.finally(() => {
 			panel.syncing = false;
 		});
+};
+
+const toggleFixedSchedule = async (row: any, enabled: number) => {
+	if (!canSaveFixedSchedule || fixedScheduleSaving[row.id]) return;
+	if (enabled === 0) {
+		try {
+			await ElMessageBox.confirm('关闭后会保留固定档成员配置，但之后新建档不再自动带入。确认关闭吗？', '关闭固定档', { type: 'warning' });
+		} catch {
+			return;
+		}
+	}
+	fixedScheduleSaving[row.id] = true;
+	try {
+		await saveWechatRobotGroupFixedSchedule(row.id, enabled);
+		const response: any = await getWechatRobotGroupFixedSchedule(row.id);
+		row.fixedScheduleEnabled = response.data.enabled ?? 0;
+		ElMessage.success(row.fixedScheduleEnabled === 1 ? '固定档已开启' : '固定档已关闭');
+	} finally {
+		fixedScheduleSaving[row.id] = false;
+	}
 };
 
 const resetQuery = () => {
