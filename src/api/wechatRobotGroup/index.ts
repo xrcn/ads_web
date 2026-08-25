@@ -141,3 +141,6 @@ export const saveWechatRobotGroupReportConfig=(data:object)=>request({url:'/api/
 export const getWechatRobotGroupActiveReports=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/activeReports',method:'get',params:{groupId}});
 export const closeWechatRobotGroupReport=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reportClose',method:'post',data});
 export const getWechatRobotGroupReportConfigAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reportConfigAudit',method:'get',params:{groupId}});
+export const getWechatRobotGroupStatisticsConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfig',method:'get',params:{groupId}});
+export const saveWechatRobotGroupStatisticsConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfigSave',method:'put',data});
+export const getWechatRobotGroupStatisticsConfigAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfigAudit',method:'get',params:{groupId}});
