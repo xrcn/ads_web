@@ -136,3 +136,8 @@ export const restoreWechatRobotGroupFixedException=(data:object)=>request({url:'
 export const saveWechatRobotGroupHostException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/hostExceptionSave',method:'post',data});
 export const restoreWechatRobotGroupHostException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/hostExceptionRestore',method:'delete',data});
 export const getWechatRobotGroupSchedulePlanAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlanAudit',method:'get',params:{groupId}});
+export const getWechatRobotGroupReportConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reportConfig',method:'get',params:{groupId}});
+export const saveWechatRobotGroupReportConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reportConfigSave',method:'put',data});
+export const getWechatRobotGroupActiveReports=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/activeReports',method:'get',params:{groupId}});
+export const closeWechatRobotGroupReport=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reportClose',method:'post',data});
+export const getWechatRobotGroupReportConfigAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reportConfigAudit',method:'get',params:{groupId}});
