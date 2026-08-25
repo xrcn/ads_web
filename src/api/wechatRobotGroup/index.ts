@@ -126,3 +126,13 @@ export const grantWechatRobotGroupSpecialTop=(data:object)=>request({url:'/api/v
 export const cancelWechatRobotGroupSpecialTop=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/specialTopCancel',method:'delete',data});
 export const getWechatRobotGroupScheduleTiming=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/scheduleTiming',method:'get',params:{groupId}});
 export const saveWechatRobotGroupScheduleTiming=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/scheduleTimingSave',method:'put',data});
+export const getWechatRobotGroupSchedulePlan=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlan',method:'get',params:{groupId}});
+export const saveWechatRobotGroupSchedulePlan=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlanSave',method:'put',data});
+export const batchSaveWechatRobotGroupSchedulePlan=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlanBatchSave',method:'post',data});
+export const batchClearWechatRobotGroupSchedulePlan=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlanBatchClear',method:'post',data});
+export const getWechatRobotGroupScheduleExceptions=(groupId:number,businessDate:string)=>request({url:'/api/v1/system/wechatRobotGroup/scheduleExceptions',method:'get',params:{groupId,businessDate}});
+export const saveWechatRobotGroupFixedException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/fixedExceptionSave',method:'post',data});
+export const restoreWechatRobotGroupFixedException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/fixedExceptionRestore',method:'delete',data});
+export const saveWechatRobotGroupHostException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/hostExceptionSave',method:'post',data});
+export const restoreWechatRobotGroupHostException=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/hostExceptionRestore',method:'delete',data});
+export const getWechatRobotGroupSchedulePlanAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/schedulePlanAudit',method:'get',params:{groupId}});
