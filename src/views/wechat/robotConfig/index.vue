@@ -47,6 +47,19 @@
 								</el-descriptions-item>
 							</el-descriptions>
 						</template>
+						<template v-else-if="tab.name === 'queue'">
+							<div class="panel-heading"><div><h4>麦序规则</h4><p>保存后只影响后续新命令，不自动重排当前麦序。</p></div><el-button v-if="canSaveQueueRules" type="primary" :loading="queueSaving" @click="saveQueueRuleForm">保存本页</el-button></div>
+							<el-form :model="queueRules" label-width="130px" class="queue-form">
+								<el-row :gutter="18"><el-col :xs="24" :md="12"><el-form-item label="扣排人数"><el-input-number v-model="queueRules.slotCount" :min="1" :max="8" /></el-form-item></el-col><el-col :xs="24" :md="12"><el-form-item label="手速优先人数"><el-input-number v-model="queueRules.speedPriorityCount" :min="0" :max="queueRules.slotCount" /></el-form-item></el-col></el-row>
+								<el-row :gutter="18"><el-col :xs="24" :md="12"><el-form-item label="特殊置顶人数"><el-input-number v-model="queueRules.specialTopCount" :min="0" :max="queueRules.slotCount" /></el-form-item></el-col><el-col :xs="24" :md="12"><el-form-item label="普通自排仅管理员"><el-switch v-model="queueRules.queueSelfAdminOnly" :active-value="1" :inactive-value="0" /></el-form-item></el-col></el-row>
+								<el-row :gutter="18"><el-col :xs="24" :md="12"><el-form-item label="手速排允许取排"><el-switch v-model="queueRules.speedTakeEnabled" :active-value="1" :inactive-value="0" /></el-form-item></el-col><el-col :xs="24" :md="12"><el-form-item label="任务排允许取排"><el-switch v-model="queueRules.taskTakeEnabled" :active-value="1" :inactive-value="0" /></el-form-item></el-col></el-row>
+								<el-row :gutter="18"><el-col :xs="24" :md="12"><el-form-item label="P8模式"><el-select v-model="queueRules.p8Mode"><el-option label="普通麦位" value="NORMAL" /><el-option label="保留麦位" value="RESERVED" /><el-option label="仅任务排老板位" value="TASK_ONLY" /></el-select></el-form-item></el-col><el-col :xs="24" :md="12"><el-form-item label="P8名称"><el-input v-model="queueRules.p8Name" maxlength="32" /></el-form-item></el-col></el-row>
+							</el-form>
+							<el-alert title="特殊置顶人数与手速优先人数之和不能超过扣排人数" type="info" :closable="false" class="mb15" />
+							<el-divider content-position="left">新人一次性特殊置顶资格</el-divider>
+							<div class="qualification-toolbar"><el-select v-if="canGrantSpecialTop" v-model="grantMemberWxid" filterable placeholder="选择当前在群成员" style="width:260px"><el-option v-for="member in specialCandidates" :key="member.memberWxid" :label="member.memberName" :value="member.memberWxid" /></el-select><el-button v-if="canGrantSpecialTop" type="primary" @click="grantSpecialTop">发放资格</el-button><el-select v-model="specialStatus" style="width:150px" @change="loadSpecialTop"><el-option label="可用" value="AVAILABLE" /><el-option label="已使用" value="CONSUMED" /><el-option label="已取消" value="CANCELLED" /></el-select></div>
+							<el-table :data="specialList" border stripe><el-table-column prop="memberName" label="成员" min-width="150" /><el-table-column prop="memberWxid" label="wxid" min-width="200" /><el-table-column prop="status" label="状态" width="100" /><el-table-column prop="grantedAt" label="发放时间" width="170" /><el-table-column label="操作" width="90"><template #default="{row}"><el-button v-if="row.status==='AVAILABLE' && canCancelSpecialTop" text type="danger" @click="cancelSpecialTop(row)">取消</el-button></template></el-table-column></el-table>
+						</template>
 						<template v-else>
 							<div class="panel-heading"><div><h4>{{ tab.label }}</h4><p>{{ tab.description }}</p></div></div>
 							<el-empty description="该分类将在业务规则确认并完成真实接入后开放" />
@@ -61,9 +74,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute } from 'vue-router';
-import { getWechatRobotGroupConfigOverview, getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
+import { cancelWechatRobotGroupSpecialTop, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupQueueRules, getWechatRobotGroupSpecialTopList, grantWechatRobotGroupSpecialTop, saveWechatRobotGroupQueueRules } from '/@/api/wechatRobotGroup';
 import { auth } from '/@/utils/authFunction';
 
 defineOptions({ name: 'wechatRobotConfig' });
@@ -77,6 +91,9 @@ const groupOptions = ref<any[]>([]);
 const overview = ref<any>();
 const activeTab = ref('basic');
 const tabPosition = ref<'left' | 'top'>('left');
+const queueSaving=ref(false);const specialStatus=ref('AVAILABLE');const specialList=ref<any[]>([]);const specialCandidates=ref<any[]>([]);const grantMemberWxid=ref('');
+const queueRules=reactive({slotCount:8,speedPriorityCount:0,specialTopCount:0,speedTakeEnabled:1,taskTakeEnabled:0,guestSlotEnabled:0,p8Mode:'NORMAL',p8Name:'客麦位',queueSelfAdminOnly:0});
+const canReadQueueRules=auth('api/v1/system/wechatRobotGroup/queueRules');const canSaveQueueRules=auth('api/v1/system/wechatRobotGroup/queueRulesSave');const canListSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopList');const canGrantSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopGrant');const canCancelSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopCancel');
 const mobileMedia = window.matchMedia('(max-width: 768px)');
 const tabs = [
 	{ name: 'basic', label: '基础信息', description: '群、厅号、绑定机器人和启停状态。' },
@@ -131,6 +148,14 @@ const loadGroups = async () => {
 	}
 };
 
+const loadQueueRules=async()=>{if(!selectedGroupId.value||!canReadQueueRules)return;const res:any=await getWechatRobotGroupQueueRules(selectedGroupId.value);Object.assign(queueRules,res.data);};
+const loadSpecialTop=async()=>{if(!selectedGroupId.value||!canListSpecialTop)return;const res:any=await getWechatRobotGroupSpecialTopList(selectedGroupId.value,specialStatus.value);specialList.value=res.data.list||[];specialCandidates.value=res.data.candidates||[];};
+const loadQueueTab=async()=>{await Promise.all([loadQueueRules(),loadSpecialTop()]);};
+const saveQueueRuleForm=async()=>{if(!selectedGroupId.value)return;if(queueRules.specialTopCount+queueRules.speedPriorityCount>queueRules.slotCount){ElMessage.error('特殊置顶人数与手速优先人数之和不能超过扣排人数');return;}queueSaving.value=true;try{const res:any=await saveWechatRobotGroupQueueRules({groupId:selectedGroupId.value,...queueRules});Object.assign(queueRules,res.data);ElMessage.success('麦序规则已保存');}finally{queueSaving.value=false;}};
+const grantSpecialTop=async()=>{if(!selectedGroupId.value||!grantMemberWxid.value)return;const member=specialCandidates.value.find((item:any)=>item.memberWxid===grantMemberWxid.value);await grantWechatRobotGroupSpecialTop({groupId:selectedGroupId.value,memberWxid:grantMemberWxid.value,memberName:member?.memberName||''});grantMemberWxid.value='';ElMessage.success('特殊置顶资格已发放');await loadSpecialTop();};
+const cancelSpecialTop=async(row:any)=>{if(!selectedGroupId.value)return;await ElMessageBox.confirm(`确认取消 ${row.memberName||row.memberWxid} 的特殊置顶资格？`,'提示',{type:'warning'});await cancelWechatRobotGroupSpecialTop({groupId:selectedGroupId.value,id:row.id});ElMessage.success('资格已取消');await loadSpecialTop();};
+watch(activeTab,(value)=>{if(value==='queue')loadQueueTab();});watch(selectedGroupId,()=>{if(activeTab.value==='queue')loadQueueTab();});
+
 onMounted(() => {
 	syncTabPosition();
 	mobileMedia.addEventListener('change', syncTabPosition);
@@ -144,5 +169,6 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 .config-tabs { min-height: 480px; :deep(.el-tabs__content) { padding: 0 18px; } }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--el-border-color-lighter); h4 { margin: 0 0 5px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 12px; } }
 .error-text { color: var(--el-color-danger); }
+.qualification-toolbar { display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap; }
 @media (max-width: 768px) { .config-header { align-items: flex-start; flex-direction: column; } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
 </style>

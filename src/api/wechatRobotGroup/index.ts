@@ -119,3 +119,8 @@ export function getWechatRobotGroupConfigOverview(groupId: number) {
 		params: { groupId },
 	});
 }
+export const getWechatRobotGroupQueueRules=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/queueRules',method:'get',params:{groupId}});
+export const saveWechatRobotGroupQueueRules=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/queueRulesSave',method:'put',data});
+export const getWechatRobotGroupSpecialTopList=(groupId:number,status:string)=>request({url:'/api/v1/system/wechatRobotGroup/specialTopList',method:'get',params:{groupId,status}});
+export const grantWechatRobotGroupSpecialTop=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/specialTopGrant',method:'post',data});
+export const cancelWechatRobotGroupSpecialTop=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/specialTopCancel',method:'delete',data});
