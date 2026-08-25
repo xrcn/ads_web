@@ -72,8 +72,9 @@
 					</template>
 				</el-table-column>
 				<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-				<el-table-column label="操作" width="270" fixed="right">
+				<el-table-column label="操作" width="330" fixed="right">
 					<template #default="{ row }">
+						<el-button v-if="canViewRobotConfig" v-auth="'api/v1/system/wechatRobotGroup/configOverview'" text type="primary" @click="openRobotConfig(row)">配置</el-button>
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/edit'" text type="primary" @click="openEdit(row)">编辑</el-button>
 						<el-button v-auth-all="['api/v1/system/wechatRobotGroup/adminList', 'api/v1/system/wechatRobotGroup/queuePolicy']" text type="primary" @click="openPolicy(row)">管理员与排麦策略</el-button>
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text type="primary" @click="handleToggleStatus(row)">
@@ -161,6 +162,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -184,6 +186,7 @@ import { auth } from '/@/utils/authFunction';
 
 defineOptions({ name: 'wechatRobotGroup' });
 
+const router = useRouter();
 const formRef = ref<FormInstance>();
 const loading = ref(false);
 const saving = ref(false);
@@ -203,6 +206,7 @@ const canListMembers = auth('api/v1/system/wechatRobotGroup/memberList');
 const canSyncMembers = auth('api/v1/system/wechatRobotGroup/memberSync');
 const canReadFixedSchedule = auth('api/v1/system/wechatRobotGroup/fixedSchedule');
 const canSaveFixedSchedule = auth('api/v1/system/wechatRobotGroup/fixedScheduleSave');
+const canViewRobotConfig = auth('api/v1/system/wechatRobotGroup/configOverview');
 const fixedScheduleSaving = reactive<Record<number, boolean>>({});
 
 const query = reactive({
@@ -213,6 +217,8 @@ const query = reactive({
 	pageNum: 1,
 	pageSize: 10,
 });
+
+const openRobotConfig = (row: any) => router.push({ path: '/wechat/robotConfig', query: { groupId: row.id } });
 
 const list = ref<any[]>([]);
 const total = ref(0);

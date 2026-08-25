@@ -111,3 +111,11 @@ export function saveWechatRobotGroupFixedSchedule(groupId: number, enabled: numb
 		data: { groupId, enabled },
 	});
 }
+
+export function getWechatRobotGroupConfigOverview(groupId: number) {
+	return request({
+		url: '/api/v1/system/wechatRobotGroup/configOverview',
+		method: 'get',
+		params: { groupId },
+	});
+}
