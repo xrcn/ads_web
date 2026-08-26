@@ -1,89 +1,32 @@
 <template>
-	<div class="anchor-manage-container">
-		<el-card shadow="hover">
-			<div class="anchor-manage-search mb15">
-				<el-form :model="query" ref="queryRef" :inline="true" label-width="68px">
-					<el-form-item label="主播ID" prop="anchorId">
-						<el-input v-model="query.anchorId" placeholder="请输入主播ID" clearable style="width: 220px" />
-					</el-form-item>
-					<el-form-item label="主播昵称" prop="nickname">
-						<el-input v-model="query.nickname" placeholder="请输入主播昵称" clearable style="width: 220px" />
-					</el-form-item>
-					<el-form-item label="手机号" prop="mobile">
-						<el-input v-model="query.mobile" placeholder="请输入手机号" clearable style="width: 220px" />
-					</el-form-item>
-					<el-form-item label="所属厅" prop="hallId">
-						<el-select v-model="query.hallId" placeholder="请选择所属厅" clearable style="width: 220px">
-							<el-option v-for="item in hallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" />
-						</el-select>
-					</el-form-item>
-					<el-form-item label="状态" prop="status">
-						<el-select v-model="query.status" placeholder="请选择状态" clearable style="width: 220px">
-							<el-option label="正常" value="normal" />
-							<el-option label="封号" value="banned" />
-							<el-option label="离职" value="left" />
-						</el-select>
-					</el-form-item>
-					<el-form-item>
-						<el-button type="primary" @click="loadList">
-							<el-icon><ele-Search /></el-icon>
-							查询
-						</el-button>
-						<el-button @click="resetQuery">
-							<el-icon><ele-Refresh /></el-icon>
-							重置
-						</el-button>
-						<el-button type="success" plain @click="openAddDialog">
-							<el-icon><ele-FolderAdd /></el-icon>
-							新增主播
-						</el-button>
-					</el-form-item>
-				</el-form>
-			</div>
-			<AnchorList ref="anchorListRef" :query="query" :hall-options="hallOptions" />
-		</el-card>
-	</div>
+	<div class="anchor-manage-container"><el-card shadow="hover">
+		<el-form :model="query" ref="queryRef" :inline="true" label-width="76px" class="mb15">
+			<el-form-item label="关键词"><el-input v-model="query.nickname" placeholder="主播/微信/群昵称或姓名" clearable /></el-form-item>
+			<el-form-item label="主播ID"><el-input v-model="query.anchorId" clearable /></el-form-item>
+			<el-form-item label="平台"><el-select v-model="query.platformCode" clearable><el-option v-for="item in platformOptions" :key="item.code" :label="item.name" :value="item.code" /></el-select></el-form-item>
+			<el-form-item label="所属厅"><el-select v-model="query.hallId" clearable><el-option v-for="item in hallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" /></el-select></el-form-item>
+			<el-form-item label="微信群"><el-select v-model="query.groupId" clearable filterable><el-option v-for="item in groupOptions" :key="item.id" :label="item.groupName" :value="item.id" /></el-select></el-form-item>
+			<el-form-item label="绑定状态"><el-select v-model="query.bindingStatus" clearable><el-option label="待绑定" value="PENDING"/><el-option label="已绑定" value="BOUND"/><el-option label="未关联微信" value="UNLINKED_WECHAT"/></el-select></el-form-item>
+			<el-form-item label="群状态"><el-select v-model="query.presenceStatus" clearable><el-option label="至少一群在群" value="PRESENT"/><el-option label="全部已离群" value="LEFT"/></el-select></el-form-item>
+			<el-form-item label="资料状态"><el-select v-model="query.completeness" clearable><el-option label="已完善" value="COMPLETE"/><el-option label="待完善" value="INCOMPLETE"/></el-select></el-form-item>
+			<el-form-item label="记录状态"><el-select v-model="query.recordState"><el-option label="正常" value="ACTIVE"/><el-option label="已删除" value="DELETED"/><el-option label="已忽略" value="IGNORED"/></el-select></el-form-item>
+			<el-form-item><el-button type="primary" @click="loadList">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button type="success" plain @click="openAddDialog">新增主播</el-button></el-form-item>
+		</el-form>
+		<div class="mb15"><el-button v-auth="'api/v1/system/anchor/profile/batchDelete'" type="danger" plain @click="batch('DELETE')">批量删除</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchIgnore'" type="warning" plain @click="batch('IGNORE')">批量忽略</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchCancelIgnore'" plain @click="batch('CANCEL_IGNORE')">取消忽略</el-button></div>
+		<AnchorList ref="anchorListRef" :query="query" :hall-options="hallOptions" :platform-options="platformOptions" />
+	</el-card></div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import type { FormInstance } from 'element-plus';
 import AnchorList from '/@/views/anchor/manage/component/anchorList.vue';
-import { getAnchorHallOptions } from '/@/api/anchor';
-
+import { getAnchorHallOptions, getAnchorPlatformOptions } from '/@/api/anchor';
+import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 defineOptions({ name: 'anchorManage' });
-
-const queryRef = ref<FormInstance>();
-const anchorListRef = ref();
-const hallOptions = ref<any[]>([]);
-const query = reactive({
-	anchorId: '',
-	nickname: '',
-	mobile: '',
-	hallId: '',
-	status: '',
-});
-
-const loadHallOptions = () => {
-	getAnchorHallOptions().then((res: any) => {
-		hallOptions.value = res.data.list ?? [];
-	});
-};
-
-const loadList = () => {
-	anchorListRef.value?.loadList();
-};
-
-const openAddDialog = () => {
-	anchorListRef.value?.openAddDialog();
-};
-
-const resetQuery = () => {
-	queryRef.value?.resetFields();
-	loadList();
-};
-
-onMounted(() => {
-	loadHallOptions();
-});
+const queryRef=ref<FormInstance>(); const anchorListRef=ref(); const hallOptions=ref<any[]>([]); const platformOptions=ref<any[]>([]); const groupOptions=ref<any[]>([]);
+const defaults={anchorId:'',nickname:'',mobile:'',hallId:'',platformCode:'',groupId:'',bindingStatus:'',presenceStatus:'',completeness:'',recordState:'ACTIVE',status:''}; const query=reactive({...defaults});
+const loadList=()=>anchorListRef.value?.loadList(); const openAddDialog=()=>anchorListRef.value?.openAddDialog(); const batch=(action:string)=>anchorListRef.value?.runBatch(action);
+const resetQuery=()=>{ queryRef.value?.resetFields(); Object.assign(query,defaults); loadList(); };
+onMounted(async()=>{ const [h,p,groups]:any[]=await Promise.all([getAnchorHallOptions(),getAnchorPlatformOptions(),getWechatRobotGroupList({pageNum:1,pageSize:1000})]); hallOptions.value=h.data.list??[]; platformOptions.value=p.data.list??[]; groupOptions.value=groups.data.list??[]; });
 </script>

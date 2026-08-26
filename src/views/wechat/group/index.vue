@@ -33,7 +33,7 @@
 						<div class="group-member-panel">
 							<div class="group-member-toolbar">
 								<el-switch v-model="memberPanel(row).includeLeft" active-text="包含已离群成员" @change="loadMembers(row, true)" />
-								<el-button v-if="canSyncMembers" v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1 || row.accountStatus !== 1" @click="syncMembers(row)">立即同步</el-button>
+								<el-button v-if="canSyncMembers" v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1 || row.accountStatus !== 1" @click="syncMembers(row)">收集群成员</el-button>
 								<span>最近成功同步：{{ memberPanel(row).lastSuccessfulSyncAt || '-' }}</span>
 							</div>
 							<el-alert v-if="memberPanel(row).error" :title="memberPanel(row).error" type="error" show-icon :closable="false" class="mb10" />
@@ -57,6 +57,8 @@
 				</el-table-column>
 				<el-table-column prop="groupName" label="微信群名称" min-width="160" show-overflow-tooltip />
 				<el-table-column prop="hallNo" label="厅号" min-width="110" show-overflow-tooltip />
+				<el-table-column prop="defaultPlatformCode" label="默认平台" min-width="110"><template #default="{row}">{{ platformName(row.defaultPlatformCode) }}</template></el-table-column>
+				<el-table-column prop="defaultHallId" label="默认厅" min-width="100"><template #default="{row}">{{ hallName(row.defaultHallId) }}</template></el-table-column>
 				<el-table-column prop="groupWxid" label="微信群wxid" min-width="180" show-overflow-tooltip />
 				<el-table-column prop="robotName" label="绑定机器人" min-width="140" show-overflow-tooltip />
 				<el-table-column prop="appId" label="机器人appId" min-width="170" show-overflow-tooltip />
@@ -65,6 +67,7 @@
 						<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
 					</template>
 				</el-table-column>
+				<el-table-column label="排档" width="100"><template #default="{row}"><el-tag :type="row.runningStatus===1?'success':'info'">{{row.runningStatus===1?'运行中':'未启动'}}</el-tag></template></el-table-column>
 				<el-table-column v-if="canReadFixedSchedule" label="固定档" width="150" align="center">
 					<template #default="{ row }">
 						<el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" />
@@ -72,7 +75,7 @@
 					</template>
 				</el-table-column>
 				<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-				<el-table-column label="操作" width="330" fixed="right">
+				<el-table-column label="操作" width="410" fixed="right">
 					<template #default="{ row }">
 						<el-button v-if="canViewRobotConfig" v-auth="'api/v1/system/wechatRobotGroup/configOverview'" text type="primary" @click="openRobotConfig(row)">配置</el-button>
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/edit'" text type="primary" @click="openEdit(row)">编辑</el-button>
@@ -80,6 +83,7 @@
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text type="primary" @click="handleToggleStatus(row)">
 							{{ row.status === 1 ? '停用' : '启用' }}
 						</el-button>
+						<el-button v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus===1?'danger':'success'" @click="toggleRunning(row)">{{row.runningStatus===1?'停止排档':'启动排档'}}</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -112,6 +116,8 @@
 							<el-input v-model="form.hallNo" placeholder="未设置时定时播报显示未设置" />
 						</el-form-item>
 					</el-col>
+					<el-col :span="12"><el-form-item label="默认平台"><el-select v-model="form.defaultPlatformCode" clearable class="w100"><el-option v-for="p in platformOptions" :key="p.code" :label="p.name" :value="p.code"/></el-select></el-form-item></el-col>
+					<el-col :span="12"><el-form-item label="默认厅"><el-select v-model="form.defaultHallId" clearable class="w100"><el-option v-for="h in hallOptions" :key="h.hallId" :label="h.hallName" :value="h.hallId"/></el-select></el-form-item></el-col>
 					<el-col :span="12">
 						<el-form-item label="状态" prop="status">
 							<el-select v-model="form.status" placeholder="请选择状态" class="w100">
@@ -168,6 +174,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import {
 	addWechatRobotGroup,
 	changeWechatRobotGroupStatus,
+	changeWechatRobotGroupRunningStatus,
 	deleteWechatRobotGroupAdmin,
 	editWechatRobotGroup,
 	getWechatRobotGroupAdmins,
@@ -182,6 +189,7 @@ import {
 	syncWechatRobotGroupMembers,
 } from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
+import { getAnchorHallOptions,getAnchorPlatformOptions } from '/@/api/anchor';
 import { auth } from '/@/utils/authFunction';
 
 defineOptions({ name: 'wechatRobotGroup' });
@@ -193,6 +201,7 @@ const saving = ref(false);
 const dialogVisible = ref(false);
 const dialogTitle = ref('新增微信群');
 const accountOptions = ref<any[]>([]);
+const platformOptions = ref<any[]>([]); const hallOptions = ref<any[]>([]);
 const policyVisible = ref(false);
 const adminLoading = ref(false);
 const adminSaving = ref(false);
@@ -229,6 +238,8 @@ const createForm = () => ({
 	groupWxid: '',
 	groupName: '',
 	hallNo: '',
+	defaultPlatformCode: '',
+	defaultHallId: '',
 	status: 1,
 	remark: '',
 });
@@ -305,7 +316,7 @@ const syncMembers = (row: any) => {
 	syncWechatRobotGroupMembers(row.id)
 		.then((res: any) => {
 			const result = res.data || {};
-			panel.result = `同步成功，当前成员 ${result.memberCount ?? 0} 人`;
+			panel.result = `收集成功：当前 ${result.memberCount ?? 0} 人，新增 ${result.added ?? 0}，更新 ${result.updated ?? 0}，恢复 ${result.restored ?? 0}，离群 ${result.left ?? 0}，已忽略 ${result.ignored ?? 0}`;
 			panel.loaded = false;
 			loadMembers(row, true);
 		})
@@ -316,6 +327,8 @@ const syncMembers = (row: any) => {
 			panel.syncing = false;
 		});
 };
+const loadDefaults=async()=>{const [p,h]:any[]=await Promise.all([getAnchorPlatformOptions(),getAnchorHallOptions()]);platformOptions.value=p.data.list??[];hallOptions.value=h.data.list??[];};
+const platformName=(code:string)=>platformOptions.value.find((p:any)=>p.code===code)?.name||code||'-'; const hallName=(id:number)=>hallOptions.value.find((h:any)=>h.hallId===id)?.hallName||'-';
 
 const toggleFixedSchedule = async (row: any, enabled: number) => {
 	if (!canSaveFixedSchedule || fixedScheduleSaving[row.id]) return;
@@ -461,9 +474,11 @@ const handleToggleStatus = (row: any) => {
 		})
 		.catch(() => {});
 };
+const toggleRunning=(row:any)=>{const next=row.runningStatus===1?0:1;ElMessageBox.confirm(`确认${next?'启动':'停止'}“${row.groupName}”排档？`,'排档状态',{type:'warning'}).then(()=>changeWechatRobotGroupRunningStatus(row.id,next)).then(()=>{ElMessage.success(next?'排档已启动':'排档已停止');loadList();}).catch(()=>{});};
 
 onMounted(() => {
 	loadAccounts();
+	loadDefaults();
 	loadList();
 });
 </script>

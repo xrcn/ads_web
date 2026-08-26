@@ -47,6 +47,16 @@ export function getAnchorHallOptions() {
 	});
 }
 
+export const getAnchorPlatformOptions = () => request({ url: '/api/v1/system/anchor/platformOptions', method: 'get' });
+export const getAnchorProfileDetail = (profileId: number) => request({ url: '/api/v1/system/anchor/profile/detail', method: 'get', params: { profileId } });
+export const editAnchorProfile = (data: object) => request({ url: '/api/v1/system/anchor/profile/edit', method: 'put', data });
+export const saveAnchorBinding = (data: object) => request({ url: '/api/v1/system/anchor/binding/save', method: 'post', data });
+export const deleteAnchorBinding = (anchorRecordId: number) => request({ url: '/api/v1/system/anchor/binding/delete', method: 'delete', data: { anchorRecordId } });
+export const previewAnchorBatch = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchPreview', method: 'post', data });
+export const deleteAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchDelete', method: 'post', data });
+export const ignoreAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchIgnore', method: 'post', data });
+export const cancelIgnoreAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchCancelIgnore', method: 'post', data });
+
 export function getAnchorBankCardList(anchorInfoId: number) {
 	return request({
 		url: '/api/v1/system/anchor/bankCard/list',

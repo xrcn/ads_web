@@ -96,6 +96,10 @@ export function syncWechatRobotGroupMembers(groupId: number) {
 	});
 }
 
+export function changeWechatRobotGroupRunningStatus(groupId: number, runningStatus: number) {
+	return request({ url: '/api/v1/system/wechatRobotGroup/runningStatus', method: 'put', data: { groupId, runningStatus } });
+}
+
 export function getWechatRobotGroupFixedSchedule(groupId: number) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/fixedSchedule',

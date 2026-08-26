@@ -1,141 +1,32 @@
 <template>
-	<div class="anchor-list-container">
-		<el-table :data="tableData.data" style="width: 100%">
-			<el-table-column type="index" label="序号" width="60" />
-			<el-table-column label="主播头像" width="90" align="center">
-				<template #default="scope">
-					<el-avatar v-if="scope.row.avatar" :src="getUpFileUrl(scope.row.avatar)" :size="42" />
-					<el-avatar v-else :size="42">无</el-avatar>
-				</template>
-			</el-table-column>
-			<el-table-column prop="anchorId" label="主播ID" min-width="120" show-overflow-tooltip />
-			<el-table-column prop="nickname" label="主播昵称" min-width="120" show-overflow-tooltip />
-			<el-table-column prop="entryDate" label="入职时间" min-width="110" show-overflow-tooltip />
-			<el-table-column prop="realName" label="姓名" min-width="100" show-overflow-tooltip />
-			<el-table-column prop="mobile" label="手机号" min-width="120" show-overflow-tooltip />
-			<el-table-column prop="hallName" label="所属厅" min-width="120" show-overflow-tooltip />
-			<el-table-column label="状态" min-width="90" align="center">
-				<template #default="scope">
-					<el-tag :type="statusMap[scope.row.status]?.type || 'info'">{{ statusMap[scope.row.status]?.label || scope.row.status }}</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column label="工资卡信息" min-width="120" align="center">
-				<template #default="scope">
-					<el-button text type="primary" @click="openBankCardDialog(scope.row)">
-						{{ scope.row.bankCardCount > 0 ? `${scope.row.bankCardCount}张` : '未录入' }}
-					</el-button>
-				</template>
-			</el-table-column>
-			<el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-			<el-table-column label="操作" width="180" fixed="right">
-				<template #default="scope">
-					<el-button size="small" text type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
-					<el-button size="small" text type="primary" @click="openBankCardDialog(scope.row)">工资卡管理</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<pagination
-			v-show="tableData.total > 0"
-			:total="tableData.total"
-			v-model:page="tableData.param.pageNum"
-			v-model:limit="tableData.param.pageSize"
-			@pagination="loadList"
-		/>
-		<EditAnchor ref="editAnchorRef" :hall-options="hallOptions" @success="loadList" />
-		<BankCardDialog ref="bankCardDialogRef" @success="loadList" />
+	<div><el-table :data="tableData.data" @selection-change="selection=$event">
+		<el-table-column type="selection" width="48" :selectable="(row:any)=>row.recordType==='PROFILE'"/><el-table-column type="index" label="序号" width="60"/>
+		<el-table-column label="头像" width="76"><template #default="{row}"><el-avatar :src="row.avatar?getUpFileUrl(row.avatar):''">-</el-avatar></template></el-table-column>
+		<el-table-column prop="nickname" label="主播昵称" min-width="130"/><el-table-column prop="wechatNickname" label="微信昵称" min-width="120"><template #default="{row}">{{row.wechatNickname||'-'}}</template></el-table-column>
+		<el-table-column prop="memberWxid" label="wxid" min-width="180"><template #default="{row}">{{row.memberWxid||'未关联微信'}}</template></el-table-column>
+		<el-table-column label="平台" min-width="110"><template #default="{row}"><div v-for="b in row.bindings" :key="b.id">{{b.platformName||b.platformCode}}</div><el-tag v-if="!row.bindings?.length" type="warning">待绑定</el-tag></template></el-table-column>
+		<el-table-column label="主播ID" min-width="135"><template #default="{row}"><div v-for="b in row.bindings" :key="b.id">{{b.anchorId}}</div><span v-if="!row.bindings?.length">待绑定</span></template></el-table-column>
+		<el-table-column label="所属厅" min-width="120"><template #default="{row}"><div v-for="b in row.bindings" :key="b.id">{{b.hallName||b.hallId}}</div><span v-if="!row.bindings?.length">-</span></template></el-table-column>
+		<el-table-column label="微信群" min-width="180"><template #default="{row}"><div v-for="g in row.groups" :key="g.groupId"><el-tag :type="g.isPresent?'success':'info'" size="small">{{g.groupName}}·{{g.groupNickname||'-'}}</el-tag></div><span v-if="!row.groups?.length">-</span></template></el-table-column>
+		<el-table-column label="绑定" width="90"><template #default="{row}"><el-tag :type="row.bindingStatus==='BOUND'?'success':'warning'">{{bindingText[row.bindingStatus]||row.bindingStatus}}</el-tag></template></el-table-column>
+		<el-table-column label="资料" width="90"><template #default="{row}">{{row.profileCompleteness==='COMPLETE'?'已完善':'待完善'}}</template></el-table-column>
+		<el-table-column prop="mobile" label="手机号" min-width="120"><template #default="{row}">{{row.mobile||'-'}}</template></el-table-column><el-table-column prop="updatedAt" label="更新时间" min-width="165"><template #default="{row}">{{row.updatedAt||'-'}}</template></el-table-column>
+		<el-table-column label="操作" width="250" fixed="right"><template #default="{row}"><el-button text type="primary" @click="openEditDialog(row)">编辑</el-button><el-button v-if="row.bindings?.length" text type="primary" @click="openBankCardDialog(row.bindings[0])">工资卡</el-button><el-button v-if="row.recordType==='PROFILE'&&row.recordState==='ACTIVE'" v-auth="'api/v1/system/anchor/profile/batchDelete'" text type="danger" @click="runBatch('DELETE',[row.profileId])">删除</el-button><el-button v-if="row.recordType==='PROFILE'&&row.recordState==='ACTIVE'" v-auth="'api/v1/system/anchor/profile/batchIgnore'" text type="warning" @click="runBatch('IGNORE',[row.profileId])">忽略</el-button><el-button v-if="row.recordState==='IGNORED'" v-auth="'api/v1/system/anchor/profile/batchCancelIgnore'" text @click="runBatch('CANCEL_IGNORE',[row.profileId])">取消忽略</el-button></template></el-table-column>
+	</el-table>
+	<pagination v-show="tableData.total>0" :total="tableData.total" v-model:page="tableData.param.pageNum" v-model:limit="tableData.param.pageSize" @pagination="loadList"/>
+	<EditAnchor ref="editAnchorRef" :hall-options="hallOptions" :platform-options="platformOptions" @success="loadList"/><BankCardDialog ref="bankCardDialogRef" @success="loadList"/>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, toRefs, watch } from 'vue';
-import EditAnchor from '/@/views/anchor/manage/component/editAnchor.vue';
-import BankCardDialog from '/@/views/anchor/manage/component/bankCardDialog.vue';
-import { getAnchorList } from '/@/api/anchor';
-import { getUpFileUrl } from '/@/utils/gfast';
-
-defineOptions({ name: 'anchorList' });
-
-const props = defineProps({
-	query: {
-		type: Object,
-		default: () => ({}),
-	},
-	hallOptions: {
-		type: Array,
-		default: () => [],
-	},
-});
-
-const editAnchorRef = ref();
-const bankCardDialogRef = ref();
-
-const statusMap: Record<string, { label: string; type: string }> = {
-	normal: { label: '正常', type: 'success' },
-	banned: { label: '封号', type: 'danger' },
-	left: { label: '离职', type: 'info' },
-};
-
-const state = reactive({
-	tableData: {
-		data: [] as any[],
-		total: 0,
-		param: {
-			pageNum: 1,
-			pageSize: 10,
-		},
-	},
-});
-
-const { tableData } = toRefs(state);
-
-const normalizeDate = (value: string) => {
-	if (!value) return '';
-	return value.substring(0, 10);
-};
-
-const loadList = () => {
-	const params = {
-		...state.tableData.param,
-		...props.query,
-	};
-	getAnchorList(params).then((res: any) => {
-		const list = res.data.list ?? [];
-		state.tableData.data = list.map((item: any) => ({
-			...item,
-			entryDate: normalizeDate(item.entryDate || ''),
-			leaveDate: normalizeDate(item.leaveDate || ''),
-		}));
-		state.tableData.total = res.data.total ?? 0;
-	});
-};
-
-const openAddDialog = () => {
-	editAnchorRef.value?.openDialog();
-};
-
-const openEditDialog = (row: any) => {
-	editAnchorRef.value?.openDialog(row);
-};
-
-const openBankCardDialog = (row: any) => {
-	bankCardDialogRef.value?.openDialog(row);
-};
-
-watch(
-	() => props.query,
-	() => {
-		state.tableData.param.pageNum = 1;
-		loadList();
-	},
-	{ deep: true }
-);
-
-onMounted(() => {
-	loadList();
-});
-
-defineExpose({
-	loadList,
-	openAddDialog,
-});
+import { onMounted, reactive, ref, toRefs, watch } from 'vue'; import { ElMessage,ElMessageBox } from 'element-plus';
+import EditAnchor from './editAnchor.vue'; import BankCardDialog from './bankCardDialog.vue';
+import { cancelIgnoreAnchorProfiles,deleteAnchorProfiles,getAnchorList,ignoreAnchorProfiles,previewAnchorBatch } from '/@/api/anchor'; import { getUpFileUrl } from '/@/utils/gfast';
+defineOptions({name:'anchorList'}); const props=defineProps({query:{type:Object,default:()=>({})},hallOptions:{type:Array,default:()=>[]},platformOptions:{type:Array,default:()=>[]}});
+const editAnchorRef=ref(); const bankCardDialogRef=ref(); const selection=ref<any[]>([]); const bindingText:Record<string,string>={BOUND:'已绑定',PENDING:'待绑定',UNLINKED_WECHAT:'未关联微信'};
+const state=reactive({tableData:{data:[] as any[],total:0,param:{pageNum:1,pageSize:10}}}); const {tableData}=toRefs(state);
+const loadList=()=>getAnchorList({...state.tableData.param,...props.query}).then((res:any)=>{state.tableData.data=res.data.list??[];state.tableData.total=res.data.total??0;});
+const openAddDialog=()=>editAnchorRef.value?.openDialog(); const openEditDialog=(row:any)=>editAnchorRef.value?.openDialog(row); const openBankCardDialog=(binding:any)=>bankCardDialogRef.value?.openDialog({id:binding.id,nickname:binding.anchorId});
+const runBatch=async(action:string,ids?:number[])=>{const profileIds=ids??selection.value.map(r=>r.profileId);const filter=profileIds.length?{}:{...props.query};const narrowed=filter.nickname||filter.anchorId||filter.platformCode||filter.hallId||filter.groupId||filter.bindingStatus||filter.presenceStatus||filter.completeness||(filter.recordState&&filter.recordState!=='ACTIVE');if(!profileIds.length&&!narrowed){ElMessage.warning('请先勾选成员或设置昵称、主播ID、平台、厅、群或状态筛选');return;}const preview:any=await previewAnchorBatch({action,profileIds,filter});const p=preview.data;await ElMessageBox.confirm(`命中 ${p.matched}，可操作 ${p.actionable}，受阻 ${p.blocked}${p.blockedReason?'：'+p.blockedReason:''}`,'批量操作确认',{type:'warning'});const requests:Record<string,any>={DELETE:deleteAnchorProfiles,IGNORE:ignoreAnchorProfiles,CANCEL_IGNORE:cancelIgnoreAnchorProfiles};const result:any=await requests[action]({profileIds,filter});ElMessage.success(`成功 ${result.data.success}，受阻 ${result.data.blocked}`);loadList();};
+watch(()=>props.query,()=>{state.tableData.param.pageNum=1;loadList();},{deep:true}); onMounted(loadList); defineExpose({loadList,openAddDialog,runBatch});
 </script>
