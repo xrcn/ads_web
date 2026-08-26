@@ -148,3 +148,9 @@ export const getWechatRobotGroupTemplateCommands=(groupId:number)=>request({url:
 export const saveWechatRobotGroupTemplateCommand=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandSave',method:'put',data});
 export const resetWechatRobotGroupTemplateCommand=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandReset',method:'delete',data});
 export const getWechatRobotGroupTemplateCommandAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandAudit',method:'get',params:{groupId}});
+export const getWechatRobotGroupPermissionAdmins=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/permissionAdmins',method:'get',params:{groupId}});
+export const saveWechatRobotGroupPermanentAdmin=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/permanentAdminSave',method:'post',data});
+export const deleteWechatRobotGroupPermanentAdmin=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/permanentAdminDelete',method:'delete',data});
+export const getWechatRobotGroupReminderConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfig',method:'get',params:{groupId}});
+export const saveWechatRobotGroupReminderConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfigSave',method:'put',data});
+export const getWechatRobotGroupPermissionReminderAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/permissionReminderAudit',method:'get',params:{groupId}});
