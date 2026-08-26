@@ -144,3 +144,7 @@ export const getWechatRobotGroupReportConfigAudit=(groupId:number)=>request({url
 export const getWechatRobotGroupStatisticsConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfig',method:'get',params:{groupId}});
 export const saveWechatRobotGroupStatisticsConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfigSave',method:'put',data});
 export const getWechatRobotGroupStatisticsConfigAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/statisticsConfigAudit',method:'get',params:{groupId}});
+export const getWechatRobotGroupTemplateCommands=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommands',method:'get',params:{groupId}});
+export const saveWechatRobotGroupTemplateCommand=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandSave',method:'put',data});
+export const resetWechatRobotGroupTemplateCommand=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandReset',method:'delete',data});
+export const getWechatRobotGroupTemplateCommandAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/templateCommandAudit',method:'get',params:{groupId}});
