@@ -23,6 +23,10 @@ if (source.includes('保存全部')) throw new Error('phase1 must not expose a g
 for (const token of ["name: 'queueMode'", '普通模式', 'p / P / 排', '其他扣排模式暂未开放', 'overview.queueMode']) {
 	if (!source.includes(token)) throw new Error(`queue mode view missing ${token}`);
 }
+for (const token of ['预览查询设置', 'settingsPreview', 'openSettingsPreview', '启用排档时段', 'p / P / 排 / 补']) {
+	if (!source.includes(token)) throw new Error(`query settings preview missing ${token}`);
+}
+if (source.includes('麦排小时')) throw new Error('legacy active-hours label remains');
 if (source.includes('互动与随机')) throw new Error('legacy interaction/random label remains');
 
 const groupFile = new URL('../src/views/wechat/group/index.vue', import.meta.url);

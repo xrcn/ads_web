@@ -6,9 +6,7 @@
 					<h3>微信群机器人配置</h3>
 					<p>所有设置按微信群隔离，每个分类独立保存。</p>
 				</div>
-				<el-select v-model="selectedGroupId" filterable placeholder="请选择微信群" style="width: 320px" @change="loadOverview">
-					<el-option v-for="group in groupOptions" :key="group.id" :label="groupOptionLabel(group)" :value="group.id" />
-				</el-select>
+				<div class="header-actions"><el-button v-if="overview" @click="openSettingsPreview">预览查询设置</el-button><el-select v-model="selectedGroupId" filterable placeholder="请选择微信群" style="width: 320px" @change="loadOverview"><el-option v-for="group in groupOptions" :key="group.id" :label="groupOptionLabel(group)" :value="group.id" /></el-select></div>
 			</div>
 
 			<el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="mb15" />
@@ -63,7 +61,7 @@
 						<template v-else-if="tab.name === 'timing'">
 							<div class="panel-heading"><div><h4>定时排档</h4><p>时间配置真实控制自动消息与命令窗口。</p></div><el-button v-if="canSaveTiming" type="primary" :loading="timingSaving" @click="saveTimingForm">保存本页</el-button></div>
 							<el-form :model="timing" label-width="150px"><el-row :gutter="18"><el-col v-for="field in timingFields" :key="field.key" :xs="24" :md="12"><el-form-item :label="field.label"><el-input-number v-model="timing[field.key]" :min="field.min" :max="field.max" /></el-form-item></el-col></el-row></el-form>
-							<el-divider content-position="left">麦排小时</el-divider><div class="hour-actions"><el-button @click="timing.activeHours=allHours.slice()">全选</el-button><el-button @click="timing.activeHours=[]">清空</el-button></div><el-checkbox-group v-model="timing.activeHours" class="hour-grid"><el-checkbox v-for="hour in allHours" :key="hour" :value="hour" border><strong>{{hour}}-{{hour+1}}</strong><small>{{hostStateText(hour)}}</small></el-checkbox></el-checkbox-group>
+							<el-divider content-position="left">启用排档时段</el-divider><div class="hour-actions"><el-button @click="timing.activeHours=allHours.slice()">全选</el-button><el-button @click="timing.activeHours=[]">清空</el-button></div><el-checkbox-group v-model="timing.activeHours" class="hour-grid"><el-checkbox v-for="hour in allHours" :key="hour" :value="hour" border><strong>{{hour}}-{{hour+1}}</strong><small>{{hostStateText(hour)}}</small></el-checkbox></el-checkbox-group>
 						</template>
 						<template v-else-if="tab.name === 'schedule'">
 							<div class="panel-heading"><div><h4>固定档与主持</h4><p>24小时循环配置；CREATED立即同步，RUNNING不改。</p></div><div><el-button v-if="canBatchPlan" @click="openBatchPlan">批量设置</el-button><el-button v-if="canExceptions" @click="openExceptions">当天例外</el-button><el-button v-if="canPlanAudit" @click="openPlanAudit">审计</el-button></div></div>
@@ -87,7 +85,7 @@
 						</template>
 						<template v-else-if="tab.name === 'queueMode'">
 							<div class="panel-heading"><div><h4>扣排模式</h4><p>当前仅开放普通文本扣排。</p></div></div>
-							<el-descriptions :column="1" border><el-descriptions-item label="当前模式">{{overview.queueMode==='NORMAL'?'普通模式':overview.queueMode}}</el-descriptions-item><el-descriptions-item label="支持口令">p / P / 排</el-descriptions-item><el-descriptions-item label="状态"><el-tag type="success">已启用</el-tag></el-descriptions-item><el-descriptions-item label="说明">其他扣排模式暂未开放</el-descriptions-item></el-descriptions>
+							<el-descriptions :column="1" border><el-descriptions-item label="当前模式">{{overview.queueMode==='NORMAL'?'普通模式':overview.queueMode}}</el-descriptions-item><el-descriptions-item label="支持口令">p / P / 排 / 补</el-descriptions-item><el-descriptions-item label="状态"><el-tag type="success">已启用</el-tag></el-descriptions-item><el-descriptions-item label="说明">其他扣排模式暂未开放</el-descriptions-item></el-descriptions>
 						</template>
 						<template v-else-if="tab.name === 'template'">
 							<div class="panel-heading"><div><h4>全部命令与自动场景</h4><p>公共模板只读；当前页统一管理命令权限、管理员、提醒、口令和回复。</p></div><div><el-button @click="router.push('/wechat/template')">完整模板管理</el-button><el-button v-if="canTemplateAudit" @click="openTemplateAudit">模板审计</el-button><el-button v-if="canPermissionAudit" @click="openPermissionAudit">权限审计</el-button></div></div>
@@ -108,6 +106,7 @@
 			<el-empty v-else description="请选择微信群" />
 		</el-card>
 		<el-result v-else icon="warning" title="没有权限" sub-title="当前账号没有查看机器人配置权限" />
+		<el-dialog v-model="settingsPreviewDialog" title="查询设置预览" width="720px"><pre class="settings-preview">{{overview?.settingsPreview}}</pre></el-dialog>
 		<el-dialog v-model="planDialog" title="编辑小时排班" width="620px"><el-form label-width="105px"><el-form-item label="时段">{{planForm.hour}}-{{planForm.hour+1}}</el-form-item><el-form-item label="固定成员"><el-select v-model="planFixedWxids" multiple filterable style="width:100%"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="主持"><el-select v-model="planHostWxid" clearable style="width:100%"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item></el-form><template #footer><el-button @click="planDialog=false">取消</el-button><el-button type="primary" @click="savePlanRow">保存</el-button></template></el-dialog>
 		<el-dialog v-model="batchDialog" title="批量设置排班" width="620px"><el-form label-width="105px"><el-form-item label="目标小时"><el-select v-model="batchHours" multiple style="width:100%"><el-option v-for="h in allHours" :key="h" :label="`${h}-${h+1}`" :value="h"/></el-select></el-form-item><el-form-item label="固定成员"><el-select v-model="batchFixedWxids" multiple filterable style="width:100%"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="主持"><el-select v-model="batchHostWxid" clearable style="width:100%"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="清空模式"><el-select v-model="clearMode"><el-option label="仅清固定" value="FIXED_ONLY"/><el-option label="仅清主持" value="HOST_ONLY"/><el-option label="全部清空" value="ALL"/></el-select></el-form-item></el-form><template #footer><el-button type="danger" @click="clearBatchPlan">批量清空</el-button><el-button type="primary" @click="saveBatchPlan">批量覆盖</el-button></template></el-dialog>
 		<el-drawer v-model="exceptionDrawer" title="当天例外" size="560px"><el-date-picker v-model="exceptionDate" value-format="YYYY-MM-DD" @change="loadExceptions"/><div class="exception-form"><el-input-number v-model="exceptionHour" :min="0" :max="23"/><el-select v-model="exceptionMemberWxid" filterable placeholder="固定成员"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select><el-button @click="saveFixedVoid">作废固定</el-button><el-select v-model="exceptionHostWxid" clearable placeholder="临时主持"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select><el-button @click="saveHostOverride">设置主持</el-button></div><el-table :data="exceptions" border class="mt15"><el-table-column prop="hour" label="小时" width="70"/><el-table-column prop="type" label="类型" width="120"/><el-table-column label="对象"><template #default="{row}">{{row.memberName||row.hostName}}</template></el-table-column><el-table-column label="操作" width="80"><template #default="{row}"><el-button text type="danger" @click="restoreException(row)">恢复</el-button></template></el-table-column></el-table></el-drawer>
@@ -136,6 +135,7 @@ const errorMessage = ref('');
 const selectedGroupId = ref<number>();
 const groupOptions = ref<any[]>([]);
 const overview = ref<any>();
+const settingsPreviewDialog = ref(false);
 const activeTab = ref('basic');
 const tabPosition = ref<'left' | 'top'>('left');
 const queueSaving=ref(false);const specialStatus=ref('AVAILABLE');const specialList=ref<any[]>([]);const specialCandidates=ref<any[]>([]);const grantMemberWxid=ref('');
@@ -152,7 +152,7 @@ const mobileMedia = window.matchMedia('(max-width: 768px)');
 const tabs = [
 	{ name: 'basic', label: '基础信息', description: '群、厅号、绑定机器人和启停状态。' },
 	{ name: 'queue', label: '麦序规则', description: '扣排、手速、置顶、取排和 P8 规则。' },
-	{ name: 'timing', label: '定时排档', description: '麦序生命周期分钟、麦排小时和 P8 购买时间。' },
+	{ name: 'timing', label: '定时排档', description: '麦序生命周期分钟、启用排档时段和 P8 购买时间。' },
 	{ name: 'schedule', label: '固定档与主持', description: '24 小时固定成员、主持和虚拟主持开厅。' },
 	{ name: 'report', label: '报备回厅', description: '报备开关、人数、时长和提示文字。' },
 	{ name: 'checkin', label: '打卡统计', description: '麦序、任务排、黑麦、收光、全麦、冠厅和互动统计。' },
@@ -184,6 +184,11 @@ const loadOverview = async () => {
 	} finally {
 		loading.value = false;
 	}
+};
+
+const openSettingsPreview = async () => {
+	await loadOverview();
+	if (overview.value?.settingsPreview) settingsPreviewDialog.value = true;
 };
 
 const loadGroups = async () => {
@@ -231,7 +236,7 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 </script>
 
 <style scoped lang="scss">
-.config-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; h3 { margin: 0 0 6px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; } }
+.config-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; h3 { margin: 0 0 6px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; } }.header-actions{display:flex;align-items:center;gap:10px}.settings-preview{margin:0;white-space:pre-wrap;line-height:1.7;font-family:"LXGW WenKai",serif}
 .config-tabs { min-height: 480px; :deep(.el-tabs__content) { padding: 0 18px; } }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--el-border-color-lighter); h4 { margin: 0 0 5px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 12px; } }
 .error-text { color: var(--el-color-danger); }
