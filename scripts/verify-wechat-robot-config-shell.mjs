@@ -11,7 +11,7 @@ for (const token of [
 	'固定档与主持',
 	'报备回厅',
 	'打卡统计',
-	'互动与随机',
+	'扣排模式',
 	'权限与提醒',
 	'模板与口令',
 	'api/v1/system/wechatRobotGroup/configOverview',
@@ -20,6 +20,10 @@ for (const token of [
 	if (!source.includes(token)) throw new Error(`robot config shell missing ${token}`);
 }
 if (source.includes('保存全部')) throw new Error('phase1 must not expose a global save');
+for (const token of ["name: 'queueMode'", '普通模式', 'p / P / 排', '其他扣排模式暂未开放', 'overview.queueMode']) {
+	if (!source.includes(token)) throw new Error(`queue mode view missing ${token}`);
+}
+if (source.includes('互动与随机')) throw new Error('legacy interaction/random label remains');
 
 const groupFile = new URL('../src/views/wechat/group/index.vue', import.meta.url);
 const groupSource = fs.readFileSync(groupFile, 'utf8');

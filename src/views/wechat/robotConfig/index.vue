@@ -85,6 +85,10 @@
 							<div class="panel-heading"><div><h4>打卡统计</h4><p>只控制统计展示，不删除或停止采集考勤与麦序事件。</p></div><div><el-button v-if="canStatisticsAudit" @click="openStatisticsAudit">审计</el-button><el-button v-if="canSaveStatistics" type="primary" :loading="statisticsSaving" @click="saveStatisticsForm">保存本页</el-button></div></div>
 							<el-row v-if="canReadStatistics" :gutter="18"><el-col :xs="24" :lg="14"><el-form :model="statisticsConfig" label-width="150px" :disabled="!canSaveStatistics"><el-form-item label="统计总开关"><el-switch v-model="statisticsConfig.enabled" :active-value="1" :inactive-value="0"/><span class="form-tip">关闭后整点仍发送新档开档信息</span></el-form-item><el-divider content-position="left">显示内容</el-divider><el-row :gutter="16"><el-col v-for="field in statisticsFields" :key="field.key" :xs="24" :md="12"><el-form-item :label="field.label"><el-switch v-model="statisticsConfig[field.key]" :active-value="1" :inactive-value="0"/></el-form-item></el-col></el-row></el-form></el-col><el-col :xs="24" :lg="10"><el-card shadow="never" class="statistics-preview"><template #header><strong>效果预览</strong></template><pre>{{statisticsPreview}}</pre></el-card></el-col></el-row><el-empty v-else description="没有查看打卡统计配置的权限"/>
 						</template>
+						<template v-else-if="tab.name === 'queueMode'">
+							<div class="panel-heading"><div><h4>扣排模式</h4><p>当前仅开放普通文本扣排。</p></div></div>
+							<el-descriptions :column="1" border><el-descriptions-item label="当前模式">{{overview.queueMode==='NORMAL'?'普通模式':overview.queueMode}}</el-descriptions-item><el-descriptions-item label="支持口令">p / P / 排</el-descriptions-item><el-descriptions-item label="状态"><el-tag type="success">已启用</el-tag></el-descriptions-item><el-descriptions-item label="说明">其他扣排模式暂未开放</el-descriptions-item></el-descriptions>
+						</template>
 						<template v-else-if="tab.name === 'template'">
 							<div class="panel-heading"><div><h4>全部命令与自动场景</h4><p>公共模板只读；当前页统一管理命令权限、管理员、提醒、口令和回复。</p></div><div><el-button @click="router.push('/wechat/template')">完整模板管理</el-button><el-button v-if="canTemplateAudit" @click="openTemplateAudit">模板审计</el-button><el-button v-if="canPermissionAudit" @click="openPermissionAudit">权限审计</el-button></div></div>
 							<el-tabs v-model="templateSubTab"><el-tab-pane v-if="canReadTemplates" label="命令与回复" name="commands"/><el-tab-pane v-if="canReadAdmins" label="管理员" name="admins"/><el-tab-pane v-if="canReadReminders" label="自动提醒" name="reminders"/></el-tabs>
@@ -152,7 +156,7 @@ const tabs = [
 	{ name: 'schedule', label: '固定档与主持', description: '24 小时固定成员、主持和虚拟主持开厅。' },
 	{ name: 'report', label: '报备回厅', description: '报备开关、人数、时长和提示文字。' },
 	{ name: 'checkin', label: '打卡统计', description: '麦序、任务排、黑麦、收光、全麦、冠厅和互动统计。' },
-	{ name: 'random', label: '互动与随机', description: '普通、计算、图片、文本、引用和其他互动模式。' },
+	{ name: 'queueMode', label: '扣排模式', description: '群成员发送 p、P、排参与排档。' },
 	{ name: 'permission', label: '权限与提醒', description: '三来源管理员、命令策略和全体提醒。' },
 	{ name: 'template', label: '模板与口令', description: '当前群私有模板、触发口令和公共默认来源。' },
 ];
