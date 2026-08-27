@@ -44,6 +44,7 @@ export default defineComponent({
 		// 修正历史缓存中的品牌字段，避免旧缓存把错误名称带回页面
 		const normalizeThemeConfig = (cacheThemeConfig: Record<string, any>) => {
 			return {
+				...storesThemeConfig.themeConfig, // 先用默认值兜底，旧缓存缺的字段不再变 undefined
 				...cacheThemeConfig,
 				globalTitle: '倚栏听枫',
 				globalViceTitle: '倚栏听枫',

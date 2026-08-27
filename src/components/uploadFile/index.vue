@@ -1,6 +1,6 @@
 <template>
 	<el-upload
-		v-model:file-list="dataFileList"
+		:file-list="dataFileList"
 		class="upload-demo"
 		:action="action"
 		:multiple="multiple"
@@ -26,8 +26,8 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable vue/no-side-effects-in-computed-properties,no-console */
-import { computed, defineComponent, getCurrentInstance, reactive, ref, onMounted } from 'vue';
+/* eslint-disable no-console */
+import { computed, defineComponent, getCurrentInstance, reactive, ref, onMounted, watch } from 'vue';
 import type { UploadProps, UploadUserFile } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { getToken } from '/@/utils/gfast';
@@ -57,7 +57,6 @@ export default defineComponent({
 	},
 	emits: ['update:modelValue'],
 	setup(props, { emit }) {
-		let uploadedFile: Array<any> = [];
 		const { proxy } = <any>getCurrentInstance();
 		const upFileRef = ref();
 		const dataParam = reactive({
@@ -68,22 +67,21 @@ export default defineComponent({
 			fileSize: 204800, // 默认 200MB (单位 KB)
 			loaded: false,
 		});
-		const dataFileList = computed({
-			get: () => {
-				let value: Array<UploadUserFile> = (props.modelValue as UploadUserFile[]) || [];
-				value.map((item: UploadUserFile) => {
-					if (item.url) {
-						item.url = proxy.getUpFileUrl(item.url);
-					}
-					return item;
-				});
-				uploadedFile = _.cloneDeep(value);
-				return value;
-			},
-			set: (val) => {
-				emit('update:modelValue', val);
-			},
-		});
+		const canonicalFileList = ref<any[]>([]);
+		const dataFileList = ref<any[]>([]);
+		const syncDataFileList = (force = false) => {
+			const transformed = _.cloneDeep(canonicalFileList.value);
+			transformed.forEach((item: UploadUserFile) => {
+				if (item.url) item.url = proxy.getUpFileUrl(item.url);
+			});
+			if (force || !_.isEqual(dataFileList.value, transformed)) {
+				dataFileList.value = transformed;
+			}
+		};
+		watch(() => props.modelValue, (value) => {
+			canonicalFileList.value = _.cloneDeep((value as UploadUserFile[]) || []);
+			syncDataFileList();
+		}, { immediate: true });
 		const formatSizeTip = computed(() => {
 			if (serverConfig.fileSize < 1024) {
 				return serverConfig.fileSize.toFixed(0) + 'KB';
@@ -131,35 +129,38 @@ export default defineComponent({
 			ElMessage.error('最多可上传' + props.limit + '个文件，已超出最大限制数。');
 		};
 		const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile) => {
-			uploadedFile = uploadedFile.filter((item: UploadUserFile) => {
-				return item.raw?.uid != uploadFile.raw?.uid;
-			});
 			if (response.code === 0) {
-				uploadedFile.push({
+				const list = canonicalFileList.value.filter((item: UploadUserFile) => item.raw?.uid !== uploadFile.raw?.uid);
+				list.push({
 					name: response.data.name,
 					url: response.data.path,
 					fullUrl: response.data.fullPath,
 					fileType: response.data.type,
 					size: response.data.size,
 				});
+				canonicalFileList.value = list;
+				syncDataFileList(true);
+				emit('update:modelValue', _.cloneDeep(canonicalFileList.value));
 			} else {
 				ElMessage.error(response.message);
+				syncDataFileList(true);
 			}
-			setDataFileList();
 		};
 		const beforeRemove: UploadProps['beforeRemove'] = () => {
 			return true;
 		};
 		const handleRemove: UploadProps['onRemove'] = (file) => {
-			//移除后
-			uploadedFile.splice(
-				uploadedFile.findIndex((item: any) => item.name === file.name),
-				1
-			);
-			setDataFileList();
-		};
-		const setDataFileList = () => {
-			dataFileList.value = uploadedFile;
+			const key = file.raw?.uid ?? file.uid ?? (file as any).id ?? (file as any).fullUrl ?? file.url;
+			let index = key === undefined
+				? -1
+				: canonicalFileList.value.findIndex((item: any) => (item.raw?.uid ?? item.uid ?? item.id ?? item.fullUrl ?? item.url) === key);
+			if (index < 0 && file.url) index = canonicalFileList.value.findIndex((item: any) => item.url && proxy.getUpFileUrl(item.url) === file.url);
+			if (index < 0) index = dataFileList.value.findIndex((item: any) => item === file);
+			if (index < 0) index = canonicalFileList.value.findIndex((item: any) => item.name === file.name);
+			if (index < 0) return;
+			canonicalFileList.value.splice(index, 1);
+			syncDataFileList(true);
+			emit('update:modelValue', _.cloneDeep(canonicalFileList.value));
 		};
 		const handlePreview = (file: UploadUserFile) => {
 			window.open(file.url);

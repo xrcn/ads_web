@@ -56,6 +56,9 @@
 	--el-fill-color: var(--next-color-hover-rgba) !important;
 	--el-fill-color-blank: var(--next-color-disabled) !important;
 	--el-fill-color-light: var(--next-color-hover-rgba) !important;
+	// 模板深色模式漏覆盖 lighter：斑马纹行(el-table striped)残留浅色主题近白背景，
+	// 与深色下浅色文字叠加导致不可读，补深色值
+	--el-fill-color-lighter: var(--next-bg-main) !important;
 	--el-bg-color-overlay: var(--el-color-primary-light-9) !important;
 	--el-mask-color: rgb(42 42 42 / 80%);
 	--el-color-success-light-9: #1c2518;

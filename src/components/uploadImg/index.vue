@@ -1,7 +1,7 @@
 <template>
 	<div class="up-img" v-if="limit > 1">
 		<el-upload
-			v-model:file-list="dataFileList"
+			:file-list="dataFileList"
 			:limit="limit"
 			:action="action"
 			:multiple="multiple"
@@ -23,7 +23,7 @@
 	</div>
 	<div class="up-img" v-else>
 		<el-upload
-			v-model:file-list="dataFileList"
+			:file-list="dataFileList"
 			class="avatar-uploader"
 			:action="action"
 			:show-file-list="false"
@@ -40,8 +40,8 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable vue/no-side-effects-in-computed-properties,no-console */
-import { defineComponent, ref, computed, getCurrentInstance, reactive, onMounted } from 'vue';
+/* eslint-disable no-console */
+import { defineComponent, ref, getCurrentInstance, reactive, onMounted, watch } from 'vue';
 import type { UploadProps, UploadUserFile } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { getToken } from '/@/utils/gfast';
@@ -81,30 +81,29 @@ export default defineComponent({
 		});
 		const serverConfig = reactive({
 			imageType: [] as string[],
-			imageSize: 10240,
+			imageSize: props.uploadSize * 1024,
+			usingServerSize: false,
 			loaded: false,
 		});
-		let uploadedFile: Array<any> = [];
-		const dataFileList = computed({
-			get: () => {
-				let value: Array<UploadUserFile> = (props.modelValue as UploadUserFile[]) || [];
-				value.map((item: UploadUserFile) => {
-					if (item.url) {
-						item.url = proxy.getUpFileUrl(item.url);
-					}
-					return item;
-				});
-				uploadedFile = _.cloneDeep(value);
-				if (props.limit == 1) {
-					uploadedFile = [];
-					imageUrl.value = (value[0] ? value[0].url : '') as string;
-				}
-				return value;
-			},
-			set: (val) => {
-				emit('update:modelValue', val);
-			},
-		});
+		const canonicalFileList = ref<any[]>([]);
+		const dataFileList = ref<any[]>([]);
+		const syncDataFileList = (force = false) => {
+			const transformed = _.cloneDeep(canonicalFileList.value);
+			transformed.forEach((item: UploadUserFile) => {
+				if (item.url) item.url = proxy.getUpFileUrl(item.url);
+			});
+			if (force || !_.isEqual(dataFileList.value, transformed)) {
+				dataFileList.value = transformed;
+			}
+			return transformed;
+		};
+		watch(() => props.modelValue, (value) => {
+			canonicalFileList.value = _.cloneDeep((value as UploadUserFile[]) || []);
+			const transformed = syncDataFileList();
+			if (props.limit == 1) {
+				imageUrl.value = (transformed[0] ? transformed[0].url : '') as string;
+			}
+		}, { immediate: true });
 
 		const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 			if (rawFile.type.substring(0, 5) !== 'image') {
@@ -112,17 +111,18 @@ export default defineComponent({
 				return false;
 			}
 			const fileSizeKB = rawFile.size / 1024;
+			const effectiveImageSize = serverConfig.usingServerSize ? serverConfig.imageSize : props.uploadSize * 1024;
 			console.log('文件大小检查:', {
 				'文件大小 KB': fileSizeKB,
-				'限制 KB': serverConfig.imageSize,
-				'限制 MB': serverConfig.imageSize / 1024,
-				是否超标: fileSizeKB > serverConfig.imageSize,
+				'限制 KB': effectiveImageSize,
+				'限制 MB': effectiveImageSize / 1024,
+				是否超标: fileSizeKB > effectiveImageSize,
 			});
-			if (fileSizeKB > serverConfig.imageSize) {
-				if (serverConfig.imageSize < 1024) {
-					ElMessage.error('上传文件超过' + serverConfig.imageSize.toFixed(0) + 'KB');
+			if (fileSizeKB > effectiveImageSize) {
+				if (effectiveImageSize < 1024) {
+					ElMessage.error('上传文件超过' + effectiveImageSize.toFixed(0) + 'KB');
 				} else {
-					ElMessage.error('上传文件超过' + (serverConfig.imageSize / 1024).toFixed(0) + 'M');
+					ElMessage.error('上传文件超过' + (effectiveImageSize / 1024).toFixed(0) + 'M');
 				}
 				return false;
 			}
@@ -142,11 +142,17 @@ export default defineComponent({
 			return true;
 		};
 		const handleRemove: UploadProps['onRemove'] = (file) => {
-			uploadedFile.splice(
-				uploadedFile.findIndex((item: any) => item.name === file.name),
-				1
-			);
-			setDataFileList();
+			const key = file.raw?.uid ?? file.uid ?? (file as any).id ?? (file as any).fullUrl ?? file.url;
+			let index = key === undefined
+				? -1
+				: canonicalFileList.value.findIndex((item: any) => (item.raw?.uid ?? item.uid ?? item.id ?? item.fullUrl ?? item.url) === key);
+			if (index < 0 && file.url) index = canonicalFileList.value.findIndex((item: any) => item.url && proxy.getUpFileUrl(item.url) === file.url);
+			if (index < 0) index = dataFileList.value.findIndex((item: any) => item === file);
+			if (index < 0) index = canonicalFileList.value.findIndex((item: any) => item.name === file.name);
+			if (index < 0) return;
+			canonicalFileList.value.splice(index, 1);
+			syncDataFileList(true);
+			emit('update:modelValue', _.cloneDeep(canonicalFileList.value));
 		};
 		const handleExceed = () => {
 			ElMessage.error('最多可上传' + props.limit + '个文件，已超出最大限制数。');
@@ -156,27 +162,23 @@ export default defineComponent({
 			dialogVisible.value = true;
 		};
 		const handleAvatarSuccess: UploadProps['onSuccess'] = (response, uploadFile) => {
-			if (props.limit == 1) {
-				uploadedFile = [];
-				imageUrl.value = URL.createObjectURL(uploadFile.raw!);
-			}
-			uploadedFile = uploadedFile.filter((item: UploadUserFile) => {
-				return item.raw?.uid != uploadFile.raw?.uid;
-			});
 			if (response.code === 0) {
-				uploadedFile.push({
+				const serverFile = {
 					name: response.data.name,
 					url: response.data.path,
 					fileType: response.data.type,
 					size: response.data.size,
-				});
+				};
+				const list = props.limit === 1 ? [serverFile] : canonicalFileList.value.filter((item: UploadUserFile) => item.raw?.uid !== uploadFile.raw?.uid);
+				if (props.limit !== 1) list.push(serverFile);
+				canonicalFileList.value = list;
+				const transformed = syncDataFileList(true);
+				if (props.limit === 1) imageUrl.value = transformed[0]?.url || '';
+				emit('update:modelValue', _.cloneDeep(canonicalFileList.value));
 			} else {
 				ElMessage.error(response.message);
+				syncDataFileList(true);
 			}
-			setDataFileList();
-		};
-		const setDataFileList = () => {
-			dataFileList.value = uploadedFile;
 		};
 		const parseFileSize = (sizeStr: string): number => {
 			const match = sizeStr.match(/^(\d+)\s*(KB|MB|M|K|B)?$/i);
@@ -192,8 +194,9 @@ export default defineComponent({
 			}
 		};
 		const loadServerConfig = async () => {
+			serverConfig.imageSize = props.uploadSize * 1024;
+			serverConfig.usingServerSize = false;
 			if (!props.imageTypeFromServer) {
-				serverConfig.imageSize = props.uploadSize * 1024;
 				serverConfig.loaded = true;
 				return;
 			}
@@ -209,6 +212,7 @@ export default defineComponent({
 					}
 					if (imageSizeConfig && imageSizeConfig.configValue) {
 						serverConfig.imageSize = parseFileSize(imageSizeConfig.configValue);
+						serverConfig.usingServerSize = true;
 					}
 				}
 				console.log('服务端配置加载完成:', {
@@ -246,7 +250,6 @@ export default defineComponent({
 		};
 	},
 });
-/* eslint-enable vue/no-side-effects-in-computed-properties */
 </script>
 
 <style scoped>

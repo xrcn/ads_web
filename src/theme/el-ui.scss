@@ -39,7 +39,7 @@
 
 // el-card 背景色跟系统背景色保持一致
 html.dark .el-card {
-  --el-card-bg-color: var(--default-box-color) !important;
+  --el-card-bg-color: var(--el-bg-color-overlay) !important;
 
 }
 .el-card{
@@ -164,7 +164,7 @@ html.dark .el-card {
 
 // el-message 样式优化
 .el-message {
-  background-color: var(--default-box-color) !important;
+  background-color: var(--el-bg-color-overlay, #ffffff) !important;
   border: 0 !important;
   box-shadow:
     0 6px 16px 0 rgba(0, 0, 0, 0.08),

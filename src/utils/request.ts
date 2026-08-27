@@ -15,9 +15,12 @@ const service: AxiosInstance = axios.create({
 	},
 });
 
+let isRelogin = false;
+
 // 添加请求拦截器
 service.interceptors.request.use(
 	(config) => {
+		(config as any).__requestToken = Session.get('token');
 		// 在发送请求之前做些什么 token
 		if (Session.get('token')) {
 			config.headers!['Authorization'] = `Bearer ${Session.get('token')}`;
@@ -37,12 +40,24 @@ service.interceptors.response.use(
 		const res = response.data;
 		const code = response.data.code
 		if (code === 401) {
+			const config = response.config as any;
+			const requestToken = config.__requestToken;
+			const currentToken = Session.get('token');
+			if (requestToken && currentToken && requestToken !== currentToken && !config.__retriedAfterTokenRefresh) {
+				config.__retriedAfterTokenRefresh = true;
+				return service(config);
+			}
+			if (isRelogin) return Promise.reject(new Error('登录状态已过期'));
+			isRelogin = true;
 			ElMessageBox.alert('登录状态已过期，请重新登录', '提示', {confirmButtonText:'确定'})
 				.then(() => {
 					Session.clear(); // 清除浏览器全部临时缓存
 					window.location.href = import.meta.env.BASE_URL; // 去登录页
 				})
-				.catch(() => {});
+				.catch(() => {})
+				.finally(() => {
+					isRelogin = false;
+				});
 		} else if (code !== 0) {
 			ElMessage.error(res.message)
 			return Promise.reject(new Error(res.message))
