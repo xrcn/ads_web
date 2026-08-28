@@ -15,7 +15,7 @@
 					<template #default="{ row }">
 						<div class="scenario-table-wrap">
 							<el-table :data="row.scenarios" border size="small">
-								<el-table-column label="回复场景" width="180"><template #default="scope"><span>{{ scenarioLabel(scope.row) }}</span><el-tag v-if="isLegacyScenario(scope.row.eventKey)" size="small" type="info" class="legacy-tag">遗留模板</el-tag></template></el-table-column>
+								<el-table-column label="回复场景" width="180"><template #default="scope"><span>{{ scenarioLabel(scope.row) }}</span></template></el-table-column>
 								<el-table-column prop="eventKey" label="事件编码" min-width="210" />
 								<el-table-column label="触发规则" min-width="170"><template #default="scope">{{ scope.row.triggerDescription || '-' }}</template></el-table-column>
 								<el-table-column prop="content" label="回复模板" min-width="360" show-overflow-tooltip />
@@ -109,13 +109,11 @@ const scenarioNames: Record<string, string> = {
 	TASK_BID_SUCCESS: '任务排成功', TASK_BID_TOPPED_SUCCESS: '任务排顶位成功', TASK_BID_UNFILLED_SUCCESS: '未满任务排成功', TASK_BID_BOSS_SUCCESS: 'P8老板位任务排成功', TASK_BID_INSUFFICIENT: '任务值不足', TASK_BID_SLOT_NOT_FOUND: '指定任务麦位不存在', TASK_BID_BOSS_RESERVED: 'P8老板位强制保留', TASK_BID_BOSS_INSUFFICIENT: 'P8老板位任务值不足', TASK_BID_REJECTED: '任务排失败',
 	TAKE_QUEUE_SUCCESS: '取排成功', TAKE_QUEUE_NOT_FOUND: '没有可取麦序', TAKE_QUEUE_TASK_REJECTED: '取任务排拒绝', TAKE_QUEUE_GUEST_REJECTED: '取P8老板位拒绝', TAKE_QUEUE_ENDED_SUCCESS: '已结束档期取排', TAKE_QUEUE_MEMBER_NOT_FOUND: '指定成员未找到', TAKE_QUEUE_MEMBER_AMBIGUOUS: '指定成员昵称重名', TAKE_QUEUE_MEMBER_RESOLVE_FAILED: '指定成员解析失败',
 	REPORT_START_SUCCESS: '报备成功', REPORT_NO_RUNNING_ROUND: '无运行中麦序', REPORT_NO_CURRENT_SLOT: '不在当前麦位', REPORT_DUPLICATE: '重复报备', REPORT_FULL: '报备人数已满', REPORT_RETURN_SUCCESS: '及时回厅成功', REPORT_RETURN_MISSING: '未找到有效报备', REPORT_EXPIRED: '报备到期提醒', REPORT_SET_MAX_COUNT_SUCCESS: '设置报备人数', REPORT_SET_MINUTES_SUCCESS: '设置报备时间', REPORT_SET_START_TEXT_SUCCESS: '设置报备开始文字', REPORT_SET_END_TEXT_SUCCESS: '设置报备结束文字', REPORT_CONFIG_UNAUTHORIZED: '报备配置权限不足',
-	AUTO_CURRENT_ROUND_REPORT: '定时麦序播报', AUTO_NEXT_ROUND_REPORT: '独立下一档麦序播报', AUTO_ROUND_OPEN_REMINDER: '独立整点开档提醒', AUTO_ATTENDANCE_REPORT: '独立本档打卡记录', AUTO_ROUND_TRANSITION_REPORT: '整点结算与开档',
+	AUTO_CURRENT_ROUND_REPORT: '定时麦序播报', AUTO_NEXT_ROUND_REPORT: '下一档简版麦序', AUTO_ATTENDANCE_REPORT: '累计打卡记录',
 	GROUP_MEMBER_JOIN: '成员入群', GROUP_MEMBER_LEAVE: '成员离群',
 };
-const legacyEventKeys = new Set(['AUTO_NEXT_ROUND_REPORT', 'AUTO_ROUND_OPEN_REMINDER', 'AUTO_ATTENDANCE_REPORT']);
 const scenarioName = (item: any) => scenarioNames[item.eventKey] || item.commandName;
-const isLegacyScenario = (eventKey: string) => legacyEventKeys.has(eventKey);
-const scenarioLabel = (scenario: Pick<TemplateScenario, 'eventKey' | 'eventName'>) => `${scenario.eventName}${isLegacyScenario(scenario.eventKey) ? '（遗留）' : ''}`;
+const scenarioLabel = (scenario: Pick<TemplateScenario, 'eventName'>) => scenario.eventName;
 const commandOptions = computed<CommandOption[]>(() => {
 	const result = new Map<string, CommandOption>();
 	for (const item of options.value) {
@@ -205,5 +203,4 @@ onMounted(() => { loadGroups(); loadOptions(); loadList(); });
 .variable-tag { cursor: pointer; }
 .variable-tag-unavailable { cursor: not-allowed; opacity: 0.65; }
 .variable-errors { color: var(--el-color-danger); line-height: 1.6; }
-.legacy-tag { margin-left: 6px; vertical-align: middle; }
 </style>

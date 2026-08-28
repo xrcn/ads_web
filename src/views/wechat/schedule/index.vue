@@ -28,7 +28,7 @@
 							</el-form>
 						</el-col>
 						<el-col :xs="24" :lg="10">
-							<div class="timeline-panel"><h4>自动排档时间线</h4><el-timeline><el-timeline-item timestamp=":45" type="primary">创建并播报下一档；普通排进入手速。</el-timeline-item><el-timeline-item timestamp=":58 - :59" type="primary">下一档补位，任务排仍可参与。</el-timeline-item><el-timeline-item timestamp=":59" type="primary">结算本档并发送打卡记录。</el-timeline-item><el-timeline-item timestamp="整点" type="primary">有效主持开档并提醒。</el-timeline-item></el-timeline></div>
+							<div class="timeline-panel"><h4>自动排档时间线</h4><el-timeline><el-timeline-item timestamp=":45" type="primary">创建并播报下一档；普通排进入手速。</el-timeline-item><el-timeline-item timestamp=":58 - :59" type="primary">下一档补位，任务排仍可参与。</el-timeline-item><el-timeline-item timestamp=":59" type="primary">结算本档，先发送下一档简版，再发送累计打卡记录。</el-timeline-item><el-timeline-item timestamp="整点" type="primary">有效主持静默开档。</el-timeline-item></el-timeline></div>
 						</el-col>
 					</el-row>
 				</el-tab-pane>
