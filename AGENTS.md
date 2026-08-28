@@ -1,49 +1,74 @@
-# ads_web 前端增量规范
+# ads_web Codex 项目入口
 
-> 本文件只增加前端规则；同时继承 `E:\ads\AGENTS.md`。
+> 本仓是 ADS 麦序机器人管理后台，使用 Vue 3、Vite、TypeScript 和 Element Plus；同时遵守 `E:\ads\AGENTS.md` 的仓库路由和公共安全边界。
 
-## 1. Vue 职责边界
+## 1. 任务入口与效率
+
+- 当前用户明确指令和更深目录 `AGENTS.md` 优先于本文件。
+- 不依赖工作区的简单回答不检查 Git 或项目文档；会写文件或工作树影响结论时才检查本仓。
+- `agent.md` 仅提供稳定背景，`memory.md` 仅按关键词读取直接相关经验；不完整扫描历史设计、计划或日志。
+- 单文件低风险任务只读取目标实现、直接使用方和已有验证，不创建设计、计划、reviewer 或 re-review。
+- 标准复杂任务只维护一份简短方案，闭包末运行必要验证并由主 Agent 自检；多文件、耗时或跨仓本身不触发独立 review。
+- 只有权限、安全、生产发布、无法证明等价的业务契约变化、核心职责重构、用户明确要求或主 Agent 无法确认的高风险问题才触发一次聚焦 review。
+- 相同文档和验证结果在输入未变化时复用；中间状态只在范围、结果、风险或 blocker 变化时报告。
+
+## 2. Vue 职责边界
 
 - 页面负责路由参数、区块组合和页面级协调；组件只负责单一 UI 区块及其交互。
-- composable 仅在存在真实复用或独立生命周期时抽取；Pinia store 只保存跨页面或跨组件状态。
+- composable 只在存在真实复用或独立生命周期时抽取；Pinia store 只保存跨页面或跨组件状态。
 - API 模块负责请求、DTO 与类型，不操作 UI。
 - 命令格式、触发规则和模板 metadata 由后端维护；前端不得建立第二套业务真相。
+- 实施前先检查目标组件、直接使用方和已有验证；证据充分后停止，已满足时不重复实现，部分满足时只补真实缺口。
 
-## 2. 页面、状态与交互
+## 3. 页面、状态与交互
 
 - 区分首屏关键和非关键数据；无依赖请求并发，存在真实依赖才串行。
-- 独立区块各自维护 loading、empty、error、retry；非关键失败不得清空其他成功结果。
+- 独立区块维护自己的 loading、empty、error 和 retry；非关键失败不得清空其他成功结果。
 - 请求被替代、页面卸载或组件销毁时，清理请求、listener、timer 和 subscription。
-- 导航使用链接，操作使用按钮；表单和图标按钮必须有可识别语义与键盘焦点。
-- 大列表使用分页、虚拟化或其他受控渲染；不得延长全局 timeout 掩盖慢请求；同一错误不得由请求层与页面重复提示。
+- 导航使用链接，操作使用按钮；表单和图标按钮具备可识别语义与键盘焦点。
+- 大列表使用分页、虚拟化或其他受控渲染；不得延长全局 timeout 掩盖慢请求。
+- 同一错误不得由请求层和页面重复提示。
 
-## 3. TypeScript 与注释
+## 4. TypeScript 与注释
 
-- component、composable、API 通过类型、命名和小函数表达职责。
+- component、composable 和 API 通过类型、命名和小函数表达职责。
 - JSDoc 只说明公共契约、复杂参数或非显然副作用；template 注释只标记复杂区域。
-- 异步竞态、事件监听及特殊清理时机必须说明原因与约束。
+- 异步竞态、事件监听和特殊清理时机必须说明原因与约束。
+- 不执行全量自动修复；会改写源码的 `npm run lint-fix` 不作为只读验证。
 
-## 4. 浏览器缺陷取证
+## 5. 浏览器缺陷取证
 
 - 页面交互缺陷必须检查真实运行页面；生产缺陷同时检查生产和本地页面。
-- 修复前记录 DOM、listener、bootstrap 与 Network 证据；修复后复测原路径、失败路径和相邻交互。
+- 修复前记录与问题直接相关的 DOM、listener、bootstrap 和 Network 证据；证据足够后停止扩展扫描。
+- 修复后复测原路径、失败路径和直接相邻交互。
 - 本地 build 不证明生产静态资源、登录态、供应商响应或真实微信群效果。
 
-## 5. dotenv 与 Vite 配置
+## 6. dotenv 与 Vite
 
-- `.env` 使用 parser 支持的 `#`，注释放在变量上方；说明变量是 build-time 还是 runtime 生效、是否需要 rebuild。
-- `.env.example` 使用明显占位值并说明格式和受控来源；`#`、空格或引号等特殊字符按实际 parser 规则引用。
-- 不执行未知 `.env`；变更至少验证 Vite build 和变量生效阶段，构建通过不等于生产值已生效。
+- `.env` 使用 parser 支持的 `#` 注释，说明变量是 build-time 还是 runtime、生效条件和 rebuild 要求。
+- `.env.example` 使用占位值并说明格式与受控来源，不写真实凭据。
+- 不执行未知 `.env`；配置变更验证实际 parser 和生效阶段。
 
-## 6. 验证矩阵
+## 7. 验证边界
 
 - 当前 `package.json` 没有 test 或独立 typecheck script，不得虚报测试或类型检查通过。
-- 前端代码修改至少运行非修复型相关静态检查和 `npm run build`；不得把会改写源码的 `npm run lint-fix` 当作只读验证。
-- 关键 UI 必须验证浏览器真实交互；API 同时验证请求参数、响应、权限、空数据和错误状态。
+- Markdown、`README.md` 和 `CHANGELOG.md` 修改不运行 `npm run build`。
+- `src` 下 Vue、TypeScript、API、store、样式或 Vite 配置变化，在闭包末运行一次 `npm run build`；这是当前最小编译验证，同一输入下不重复执行。
+- 关键 UI 修改验证浏览器真实交互；API 同时验证请求参数、响应、权限、空数据和错误状态。
+- 新增文件直接检查结构、尾随空白和冲突标记，不能依赖不覆盖 untracked 文件的 `git diff --check`。
 - 引入自动化测试能力前，说明依赖、范围和成本并取得确认。
 
-## 7. 微信 API 可视化控制台
+## 8. 微信 API 可视化控制台
 
-- `public/wechat-visual-console` 是独立静态应用，不与 Vue 主站混淆。
+- `public/wechat-visual-console` 是独立静态应用，不与 Vue 主站混淆，也不因位于本仓而运行 Vue build。
 - 受控五资源为 `index.html`、`css/style.css`、`js/core.js`、`js/app.js`、`js/modules-bundle.js`。
-- 发布仅走专用 manifest、SHA-256、目录交换和 rollback 验证流程；不得调用整站 `生产一键发布.ps1`。
+- 只执行受影响资源的语法、专用 verifier 和必要浏览器验证。
+- 发布仅走专用 manifest、SHA-256、目录交换和 rollback 验证流程，不得调用整站 `生产一键发布.ps1`。
+
+## 9. 保护与完成报告
+
+- 保留用户已有 tracked、staged 与 untracked 改动；无法安全分离时停止写入。
+- 未获明确授权不得暂存、commit、push、merge、rebase、操作 branch、创建 worktree 或发布。
+- 只读任务不得修改文件、远端状态或外部系统。
+- 任务过程中自然产生已验证、未记录且可跨任务复用的前端经验时，才在结束阶段集中更新一次 `memory.md`；不主动扫描制造规则改动。
+- 所有写任务完成后列出 `A/M/D` 文件及用途、验证结果、用户改动边界、Git/发布状态和未验证项；无文件变化时明确说明。
