@@ -67,4 +67,19 @@ for (const name of selected) {
   }
 }
 
+if (selected.includes('business')) {
+  const anchorSource = readFileSync(resolve(root, 'src/views/anchor/manage/component/anchorList.vue'), 'utf8');
+  const desktopSection = anchorSource.split('<template #desktop>')[1]?.split('</el-table></template>')[0] || '';
+  const mobileSection = anchorSource.split('<template #default="{ row }">')[1]?.split('</template></MobileRecordList>')[0] || '';
+  for (const label of ['label="微信昵称"', 'label="wxid"', 'label="手机号"']) {
+    assert.ok(!desktopSection.includes(label), `anchor desktop should hide: ${label}`);
+  }
+  for (const pattern of ['anchor-mobile-avatar', 'row.nickname', 'item.anchorId', 'item.groupName']) {
+    assert.ok(mobileSection.includes(pattern), `anchor mobile is missing: ${pattern}`);
+  }
+  for (const pattern of ['row.wechatNickname', 'row.memberWxid', 'row.profileCompleteness', 'row.bindingStatus', 'row.mobile', 'row.updatedAt', '<details']) {
+    assert.ok(!mobileSection.includes(pattern), `anchor mobile should hide: ${pattern}`);
+  }
+}
+
 console.log(`MOBILE_RESPONSIVE_VERIFY_PASS phase=${phase}`);
