@@ -62,7 +62,7 @@
 				<el-table-column prop="groupName" label="微信群名称" min-width="160" show-overflow-tooltip />
 				<el-table-column prop="hallNo" label="厅号" min-width="110" show-overflow-tooltip />
 				<el-table-column prop="defaultPlatformCode" label="默认平台" min-width="110"><template #default="{row}">{{ platformName(row.defaultPlatformCode) }}</template></el-table-column>
-				<el-table-column prop="defaultHallId" label="默认厅" min-width="100"><template #default="{row}">{{ hallName(row.defaultHallId) }}</template></el-table-column>
+				<el-table-column prop="defaultHallId" label="默认厅" min-width="100"><template #default="{row}">{{ row.defaultHallName || hallName(row.defaultHallId) }}</template></el-table-column>
 				<el-table-column prop="groupWxid" label="微信群wxid" min-width="180" show-overflow-tooltip />
 				<el-table-column prop="robotName" label="绑定机器人" min-width="140" show-overflow-tooltip />
 				<el-table-column prop="appId" label="机器人appId" min-width="170" show-overflow-tooltip />
@@ -112,7 +112,7 @@
 						<div><dt>微信群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div>
 						<div><dt>机器人 appId</dt><dd>{{ row.appId || '-' }}</dd></div>
 						<div><dt>默认平台</dt><dd>{{ platformName(row.defaultPlatformCode) }}</dd></div>
-						<div><dt>默认厅</dt><dd>{{ hallName(row.defaultHallId) }}</dd></div>
+						<div><dt>默认厅</dt><dd>{{ row.defaultHallName || hallName(row.defaultHallId) }}</dd></div>
 						<div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div>
 						<div v-if="canReadFixedSchedule"><dt>固定档设置</dt><dd><el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" /><span v-else>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</span></dd></div>
 					</dl>
@@ -188,7 +188,7 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="12"><el-form-item label="默认平台"><el-select v-model="form.defaultPlatformCode" clearable class="w100"><el-option v-for="p in platformOptions" :key="p.code" :label="p.name" :value="p.code"/></el-select></el-form-item></el-col>
-					<el-col :span="12"><el-form-item label="默认厅"><el-select v-model="form.defaultHallId" clearable class="w100"><el-option v-for="h in hallOptions" :key="h.hallId" :label="h.hallName" :value="h.hallId"/></el-select></el-form-item></el-col>
+					<el-col :span="12"><el-form-item label="默认厅"><el-select v-model="form.defaultHallId" clearable class="w100"><el-option v-for="h in formHallOptions" :key="h.hallId" :label="h.hallName" :value="h.hallId" :disabled="h.disabled"/></el-select></el-form-item></el-col>
 					<el-col :span="12">
 						<el-form-item label="状态" prop="status">
 							<el-select v-model="form.status" placeholder="请选择状态" class="w100">
@@ -238,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue';
+import { computed, reactive, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -311,11 +311,14 @@ const createForm = () => ({
 	hallNo: '',
 	defaultPlatformCode: '',
 	defaultHallId: '',
+	defaultHallName: '',
 	status: 1,
 	remark: '',
 });
 
 const form = reactive(createForm());
+const withCurrentHall=(active:any[],hallId:any,hallNameValue:string)=>!hallId||active.some((item:any)=>item.hallId===hallId)?active:[...active,{hallId,hallName:`${hallNameValue||hallId}（已停用）`,disabled:true}];
+const formHallOptions=computed(()=>withCurrentHall(hallOptions.value,form.defaultHallId,form.defaultHallName));
 
 const rules: FormRules = {
 	wechatRobotAccountId: [{ required: true, message: '机器人账号不能为空', trigger: 'change' }],

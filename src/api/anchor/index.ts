@@ -47,6 +47,11 @@ export function getAnchorHallOptions() {
 	});
 }
 
+export const getAnchorHallList = (params: object) => request({ url: '/api/v1/system/anchor/hall/list', method: 'get', params });
+export const getAnchorHallDetail = (hallId: number) => request({ url: '/api/v1/system/anchor/hall/detail', method: 'get', params: { hallId } });
+export const addAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/add', method: 'post', data });
+export const editAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/edit', method: 'put', data });
+
 export const getAnchorPlatformOptions = () => request({ url: '/api/v1/system/anchor/platformOptions', method: 'get' });
 export const getAnchorProfileDetail = (profileId: number) => request({ url: '/api/v1/system/anchor/profile/detail', method: 'get', params: { profileId } });
 export const editAnchorProfile = (data: object) => request({ url: '/api/v1/system/anchor/profile/edit', method: 'put', data });

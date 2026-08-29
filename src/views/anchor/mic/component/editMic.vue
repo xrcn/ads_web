@@ -24,7 +24,7 @@
 					<el-col :span="12">
 						<el-form-item label="所属厅" prop="hallId">
 							<el-select v-model="form.hallId" filterable clearable placeholder="请选择所属厅" class="w100">
-								<el-option v-for="item in hallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" />
+								<el-option v-for="item in currentHallOptions" :key="item.hallId" :label="item.hallName" :value="item.hallId" :disabled="item.disabled" />
 							</el-select>
 						</el-form-item>
 					</el-col>
@@ -81,6 +81,7 @@ const createForm = () => ({
 	nickname: '',
 	statDate: '',
 	hallId: '',
+	hallName: '',
 	hostSlots: '',
 	shiftSlots: '',
 	jobCount: 0,
@@ -88,6 +89,10 @@ const createForm = () => ({
 });
 
 const form = reactive(createForm());
+const currentHallOptions = computed(() => {
+	if (!form.hallId || hallOptions.value.some((item: any) => item.hallId === form.hallId)) return hallOptions.value;
+	return [...hallOptions.value, { hallId: form.hallId, hallName: `${form.hallName || form.hallId}（已停用）`, disabled: true }];
+});
 
 const rules = {
 	anchorInfoId: [{ required: true, message: '请选择主播', trigger: 'change' }],
@@ -144,6 +149,7 @@ const syncAnchorMetaByAnchor = () => {
 	if (currentAnchor) {
 		form.nickname = currentAnchor.nickname || '';
 		form.hallId = currentAnchor.hallId || '';
+		form.hallName = currentAnchor.hallName || '';
 	}
 };
 
@@ -163,6 +169,7 @@ const openDialog = (row?: any) => {
 			nickname: data.nickname || '',
 			statDate: normalizeDate(data.statDate || ''),
 			hallId: data.hallId || '',
+			hallName: data.hallName || '',
 			hostSlots: formatSlots(data.slots, 'host'),
 			shiftSlots: formatSlots(data.slots, 'shift'),
 			jobCount: data.jobCount,
