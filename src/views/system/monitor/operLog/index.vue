@@ -93,7 +93,7 @@
           </el-col>
         </el-row>
       </div>
-      <el-table v-loading="loading" :data="tableData.data"  height="63vh"  @selection-change="handleSelectionChange">
+      <MobileRecordList :data="tableData.data" :loading="loading" row-key="operId" data-mobile-view="operation-log"><template #desktop><el-table v-loading="loading" :data="tableData.data"  height="63vh"  @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="日志编号" align="center" prop="operId"
                          min-width="100px"
@@ -147,7 +147,7 @@
             >删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.title }}</h3><el-tag :type="row.status === 0 ? 'success' : 'danger'">{{ row.status === 0 ? '成功' : '失败' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>操作人员</dt><dd>{{ row.operName || '-' }}</dd></div><div><dt>请求方式</dt><dd>{{ row.requestMethod || '-' }}</dd></div><div><dt>操作时间</dt><dd>{{ proxy.parseTime(row.operTime, '{y}-{m}-{d} {h}:{i}:{s}') }}</dd></div><div><dt>请求 URL</dt><dd>{{ row.operUrl || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整请求信息</summary><dl class="mobile-record-card__fields"><div><dt>主机地址</dt><dd>{{ row.operIp || '-' }}</dd></div><div><dt>操作地点</dt><dd>{{ row.operLocation || '-' }}</dd></div><div><dt>错误</dt><dd>{{ row.errorMsg || '-' }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/sysOperLog/view'" type="primary" @click="handleView(row)">详情</el-button><el-button v-auth="'api/v1/system/sysOperLog/delete'" type="danger" @click="handleDelete(row)">删除</el-button></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

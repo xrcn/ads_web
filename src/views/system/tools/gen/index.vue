@@ -65,7 +65,7 @@
           </el-col>
         </el-row>
 			</div>
-			<el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
+			<MobileRecordList :data="tableData.data" row-key="tableId" data-mobile-view="code-generator"><template #desktop><el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
 				<el-table-column type="index" label="序号" width="60" />
 				<el-table-column prop="tableName" label="表名称" show-overflow-tooltip></el-table-column>
@@ -82,7 +82,7 @@
 						<el-button size="small" text type="primary" @click="onRowDel(scope.row)"><el-icon><ele-DeleteFilled /></el-icon>删除</el-button>
 					</template>
 				</el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.tableName }}</h3></div><dl class="mobile-record-card__fields"><div><dt>表描述</dt><dd>{{ row.tableComment || '-' }}</dd></div><div><dt>实体</dt><dd>{{ row.className || '-' }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createTime || '-' }}</dd></div><div><dt>更新时间</dt><dd>{{ row.updateTime || '-' }}</dd></div></dl><div class="mobile-record-card__actions"><el-button type="primary" @click="handlePreview(row)">预览</el-button><el-button @click="handleEditTable(row)">编辑</el-button><el-dropdown><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item><el-button text @click="handleSyncTable(row)">同步</el-button></el-dropdown-item><el-dropdown-item><el-button text @click="handleGenTable(row)">生成代码</el-button></el-dropdown-item><el-dropdown-item><el-button text type="danger" @click="onRowDel(row)">删除</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

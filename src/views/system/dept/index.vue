@@ -28,7 +28,7 @@
           </el-form-item>
         </el-form>
       </div>
-			<el-table
+			<MobileRecordList :data="tableData.data" row-key="deptId" data-mobile-view="system-dept"><template #desktop><el-table
 				:data="tableData.data"
 				style="width: 100%"
 				row-key="deptId"
@@ -51,7 +51,7 @@
 						<el-button size="small" text type="primary" @click="onTabelRowDel(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.deptName }}</h3><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>排序</dt><dd>{{ row.orderNum }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createdAt || '-' }}</dd></div><div><dt>子部门</dt><dd>{{ row.children?.length || 0 }}</dd></div></dl><div class="mobile-record-card__actions"><el-button type="primary" @click="onOpenAddDept(row)">新增下级</el-button><el-button @click="onOpenEditDept(row)">修改</el-button><el-button type="danger" @click="onTabelRowDel(row)">删除</el-button></div></template></MobileRecordList>
 		</el-card>
 		<EditDept ref="editDeptRef" @deptList="deptList"/>
 	</div>

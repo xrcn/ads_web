@@ -71,7 +71,7 @@
           </el-form-item>
         </el-form>
       </div>
-      <el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
+      <MobileRecordList :data="tableData.data" row-key="configId" data-mobile-view="system-config"><template #desktop><el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="参数主键" align="center" prop="configId" />
         <el-table-column label="参数名称" align="center" prop="configName" :show-overflow-tooltip="true" />
@@ -86,7 +86,7 @@
             <el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.configName }}</h3><el-tag>{{ typeFormat(row) }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>参数键名</dt><dd>{{ row.configKey }}</dd></div><div><dt>参数键值</dt><dd>{{ row.configValue }}</dd></div><div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>参数主键</dt><dd>{{ row.configId }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createdAt || '-' }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button type="primary" @click="onOpenEditDic(row)">修改</el-button><el-button type="danger" @click="onRowDel(row)">删除</el-button></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

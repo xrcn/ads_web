@@ -31,7 +31,7 @@
           </el-form-item>
         </el-form>
       </div>
-      <el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
+      <MobileRecordList :data="tableData.data" row-key="uuid" data-mobile-view="online-user"><template #desktop><el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="uuid" label="会话编号" show-overflow-tooltip></el-table-column>
@@ -45,7 +45,7 @@
             <el-button size="small" text type="primary" @click="onRowDel(scope.row)">强退</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.userName }}</h3><el-tag type="success">在线</el-tag></div><dl class="mobile-record-card__fields"><div><dt>主机</dt><dd>{{ row.ip || '-' }}</dd></div><div><dt>浏览器</dt><dd>{{ row.explorer || '-' }}</dd></div><div><dt>操作系统</dt><dd>{{ row.os || '-' }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createTime || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看会话编号</summary><dl class="mobile-record-card__fields"><div><dt>会话编号</dt><dd>{{ row.uuid }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button type="danger" @click="onRowDel(row)">强制退出</el-button></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

@@ -37,7 +37,7 @@
           </el-form-item>
         </el-form>
 			</div>
-			<el-table :data="menuTableData" style="width: 100%" row-key="path" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
+			<MobileRecordList :data="menuTableData" row-key="path" data-mobile-view="system-menu"><template #desktop><el-table :data="menuTableData" style="width: 100%" row-key="path" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
 				<el-table-column label="菜单名称" show-overflow-tooltip>
 					<template #default="scope">
 						<SvgIcon :name="scope.row.icon" />
@@ -74,7 +74,7 @@
 						<el-button size="small" text type="primary" @click="onTabelRowDel(scope.row)" v-auth="'api/v1/system/menu/delete'">删除</el-button>
 					</template>
 				</el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.meta?.title || row.name }}</h3><el-tag>{{ row.menuType === 0 ? '目录' : row.menuType === 1 ? '菜单' : '按钮' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>路由路径</dt><dd>{{ row.path || '-' }}</dd></div><div><dt>组件路径</dt><dd>{{ row.component || '-' }}</dd></div><div><dt>API 接口</dt><dd>{{ row.apiUrl || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>排序</dt><dd>{{ row.sort || row.listOrder || 0 }}</dd></div><div><dt>显示状态</dt><dd>{{ formatIsHide(row) }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button v-if="row.menuType !== 2" v-auth="'api/v1/system/menu/add'" type="primary" @click="onOpenAddMenu(row)">新增</el-button><el-button v-auth="'api/v1/system/menu/update'" @click="onOpenEditMenu(row)">修改</el-button><el-button v-auth="'api/v1/system/menu/delete'" type="danger" @click="onTabelRowDel(row)">删除</el-button></div></template></MobileRecordList>
 		</el-card>
 		<EditMenu ref="editMenuRef" @menuList="menuList" :visibleOptions="sys_show_hide" :acType="acType"/>
 	</div>

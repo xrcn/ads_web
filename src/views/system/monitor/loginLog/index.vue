@@ -88,7 +88,7 @@
           </el-form-item>
         </el-form>
       </div>
-      <el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
+      <MobileRecordList :data="tableData.data" row-key="infoId" data-mobile-view="login-log"><template #desktop><el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="编号" align="center" prop="infoId" />
         <el-table-column label="登录名称" align="center" prop="loginName" />
@@ -100,7 +100,7 @@
         <el-table-column label="操作信息" align="center" prop="msg" />
         <el-table-column label="登录日期" align="center" prop="loginTime" width="180" />
         <el-table-column label="登录模块" alian="center" prop="module"></el-table-column>
-      </el-table>
+      </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.loginName }}</h3><el-tag :type="row.status === '0' || row.status === 0 ? 'success' : 'danger'">{{ row.status === '0' || row.status === 0 ? '成功' : '失败' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>登录时间</dt><dd>{{ row.loginTime }}</dd></div><div><dt>IP</dt><dd>{{ row.ipaddr }}</dd></div><div><dt>登录地点</dt><dd>{{ row.loginLocation || '-' }}</dd></div><div><dt>设备</dt><dd>{{ row.browser || '-' }} / {{ row.os || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>操作信息</dt><dd>{{ row.msg || '-' }}</dd></div><div><dt>登录模块</dt><dd>{{ row.module || '-' }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button type="danger" @click="onRowDel(row)">删除</el-button></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

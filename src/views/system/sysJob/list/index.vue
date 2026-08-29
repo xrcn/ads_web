@@ -54,7 +54,7 @@
 					</el-col>
 				</el-row>
 			</div>
-			<el-table v-loading="loading" :data="tableData.data" @selection-change="handleSelectionChange">
+			<MobileRecordList :data="tableData.data" :loading="loading" row-key="jobId" data-mobile-view="system-job"><template #desktop><el-table v-loading="loading" :data="tableData.data" @selection-change="handleSelectionChange">
 				<el-table-column type="selection" width="55" align="center" />
 				<el-table-column label="任务ID" align="center" prop="jobId" min-width="100px" />
 				<el-table-column label="任务名称" align="center" prop="jobName" min-width="100px" />
@@ -83,7 +83,7 @@
 						>
 					</template>
 				</el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.jobName }}</h3><el-tag :type="row.status === '0' ? 'success' : 'info'">{{ row.status === '0' ? '启用' : '暂停' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>任务组</dt><dd>{{ jobGroupFormat(row) }}</dd></div><div><dt>任务方法</dt><dd>{{ row.invokeTarget }}</dd></div><div><dt>CRON</dt><dd>{{ row.cronExpression }}</dd></div><div><dt>执行策略</dt><dd>{{ misfirePolicyFormat(row) }}</dd></div></dl><div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/sysJob/view'" type="primary" @click="handleView(row)">详情</el-button><el-button v-auth="'api/v1/system/sysJob/edit'" @click="handleUpdate(row)">修改</el-button><el-dropdown><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item><el-button v-auth="'api/v1/system/sysJob/run'" text @click="handleJobRun(row)">执行一次</el-button></el-dropdown-item><el-dropdown-item><el-button v-auth="'api/v1/system/sysJob/delete'" text type="danger" @click="handleDelete(row)">删除</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></template></MobileRecordList>
 			<pagination
 				v-show="tableData.total > 0"
 				:total="tableData.total"
