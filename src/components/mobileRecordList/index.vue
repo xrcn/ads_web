@@ -52,6 +52,17 @@ const recordKey = (row: any, index: number) => row?.[props.rowKey] ?? index;
 }
 
 @media (max-width: 768px) {
+	.el-form--inline {
+		display: block;
+
+		.el-form-item,
+		.el-input,
+		.el-select,
+		.el-date-editor {
+			width: 100% !important;
+		}
+	}
+
 	.mobile-record-list__filter-toggle {
 		display: grid;
 		grid-template-columns: auto auto minmax(0, 1fr) auto;

@@ -104,7 +104,7 @@
 				<dl class="mobile-record-card__fields">
 					<div><dt>绑定机器人</dt><dd>{{ row.robotName || '-' }}</dd></div>
 					<div><dt>排档状态</dt><dd>{{ row.runningStatus === 1 ? '运行中' : '未启动' }}</dd></div>
-					<div><dt>固定档</dt><dd>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</dd></div>
+					<div v-if="canReadFixedSchedule"><dt>固定档</dt><dd>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</dd></div>
 				</dl>
 				<details class="mobile-record-card__details">
 					<summary>查看完整信息</summary>
@@ -132,6 +132,12 @@
 								<div><dt>在群状态</dt><dd>{{ member.isPresent ? '在群' : '已离群' }}</dd></div>
 								<div><dt>邀请人</dt><dd>{{ member.inviterUserName || '-' }}</dd></div>
 								<div><dt>角色</dt><dd>{{ member.roles?.join('、') || '-' }}</dd></div>
+								<div><dt>微信昵称</dt><dd>{{ member.nickName || '-' }}</dd></div>
+								<div><dt>memberFlag</dt><dd>{{ member.memberFlag ?? '-' }}</dd></div>
+								<div><dt>首次同步</dt><dd>{{ member.firstSeenAt || '-' }}</dd></div>
+								<div><dt>最近同步</dt><dd>{{ member.lastSeenAt || '-' }}</dd></div>
+								<div><dt>离群时间</dt><dd>{{ member.leftAt || '-' }}</dd></div>
+								<div><dt>入群事件</dt><dd>{{ member.joinEventAt || '-' }}</dd></div>
 							</dl>
 						</div>
 					</div>

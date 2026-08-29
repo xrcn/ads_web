@@ -28,7 +28,7 @@
           </el-form-item>
         </el-form>
       </div>
-			<MobileRecordList :data="tableData.data" row-key="deptId" data-mobile-view="system-dept"><template #desktop><el-table
+			<MobileRecordList :data="flattenTree(tableData.data)" row-key="deptId" data-mobile-view="system-dept"><template #desktop><el-table
 				:data="tableData.data"
 				style="width: 100%"
 				row-key="deptId"
