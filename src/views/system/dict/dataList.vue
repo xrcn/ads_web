@@ -58,7 +58,7 @@
           </el-form-item>
         </el-form>
       </div>
-      <el-table :data="tableData.data" style="width: 100%"   height="63vh"  @selection-change="handleSelectionChange">
+      <MobileRecordList :data="tableData.data" row-key="dictCode" data-mobile-view="system-dict"><template #desktop><el-table :data="tableData.data" style="width: 100%"   height="63vh"  @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="字典编码" align="center" prop="dictCode" />
         <el-table-column label="字典标签" align="center" prop="dictLabel" />
@@ -78,7 +78,7 @@
             <el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.dictLabel }}</h3><el-tag :type="row.status ? 'success' : 'info'">{{ row.status ? '启用' : '禁用' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>字典编码</dt><dd>{{ row.dictCode }}</dd></div><div><dt>字典键值</dt><dd>{{ row.dictValue }}</dd></div><div><dt>排序</dt><dd>{{ row.dictSort }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>字典类型</dt><dd>{{ row.dictType }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createdAt || '-' }}</dd></div></dl></details><div class="mobile-record-card__actions"><el-button type="primary" @click="onOpenEditDic(row)">修改</el-button><el-button type="danger" @click="onRowDel(row)">删除</el-button></div></template></MobileRecordList>
       <pagination
           v-show="tableData.total>0"
           :total="tableData.total"

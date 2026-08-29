@@ -1,7 +1,7 @@
 <template>
 	<div class="system-dic-container">
-		<el-row :gutter="10" style="width: 100%;">
-			<el-col :span="5">
+		<el-row :gutter="10" class="mobile-dict-layout" style="width: 100%;">
+			<el-col :span="5" class="dict-tree-panel">
 				<el-card shadow="hover" style="height: 88vh;">
 					<el-aside style="width: 100%;">
 						<el-scrollbar>
@@ -49,7 +49,7 @@
 					</el-aside>
 				</el-card>
 			</el-col>
-			<el-col :span="19">
+			<el-col :span="19" class="dict-data-panel">
 				<apiV1SystemDictDataList ref="dataViewRef"></apiV1SystemDictDataList>
 			</el-col>
 		</el-row>
@@ -187,5 +187,10 @@ watch(filterText, (val) => {
 .filter-tree{
 	height: calc(100vh - 290px);
 	overflow-y: auto;
+}
+@media (max-width: 768px) {
+	.mobile-dict-layout { display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:12px; }
+	.dict-tree-panel,.dict-data-panel { width:100% !important;max-width:100% !important;min-width:0; }
+	.dict-tree-panel { max-height:320px;overflow-y:auto; }
 }
 </style>

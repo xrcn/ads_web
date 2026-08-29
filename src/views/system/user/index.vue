@@ -1,7 +1,7 @@
 <template>
 	<div class="system-user-container">
-    <el-row :gutter="10" style="width: 100%;">
-      <el-col :span="4">
+    <el-row :gutter="10" class="mobile-user-layout" style="width: 100%;">
+      <el-col :span="4" class="user-dept-panel">
         <el-card shadow="hover">
           <el-aside>
             <el-scrollbar>
@@ -19,7 +19,7 @@
           </el-aside>
         </el-card>
       </el-col>
-      <el-col :span="20">
+      <el-col :span="20" class="user-list-panel">
         <el-card shadow="hover">
           <div class="system-user-search mb15">
             <el-form :model="param" ref="queryRef" :inline="true" label-width="68px">
@@ -203,3 +203,10 @@ const resetQuery = (formEl: FormInstance | undefined) => {
   userList()
 };
 </script>
+<style scoped lang="scss">
+@media (max-width: 768px) {
+  .mobile-user-layout { display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:12px; }
+  .user-dept-panel,.user-list-panel { width:100% !important;max-width:100% !important;min-width:0; }
+  .user-dept-panel { max-height:320px;overflow-y:auto; }
+}
+</style>

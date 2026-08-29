@@ -1,6 +1,6 @@
 <template>
 	<div class="system-user-list-container">
-    <el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
+    <MobileRecordList :data="tableData.data" row-key="userId" data-mobile-view="system-user"><template #desktop><el-table :data="tableData.data" style="width: 100%" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column type="index" label="序号" width="60" />
       <el-table-column prop="userName" label="账户名称" show-overflow-tooltip></el-table-column>
@@ -33,7 +33,7 @@
           <el-button v-auth="'api/v1/system/user/resetPwd'" size="small" text type="primary" @click="handleResetPwd(scope.row)">重置</el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.userName }}</h3><p class="mobile-record-card__subtitle">{{ row.userNickname || '-' }}</p></div><el-tag :type="row.userStatus === 1 ? 'success' : 'info'">{{ row.userStatus === 1 ? '启用' : '禁用' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>部门</dt><dd>{{ row.dept?.deptName || '-' }}</dd></div><div><dt>角色</dt><dd>{{ row.roleInfo?.map((item:any)=>item.name).join('、') || '-' }}</dd></div><div><dt>手机号</dt><dd>{{ row.mobile || '-' }}</dd></div><div><dt>创建时间</dt><dd>{{ row.createdAt || '-' }}</dd></div></dl><div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/user/edit'" type="primary" @click="onOpenEditUser(row)">修改</el-button><el-button v-auth="'api/v1/system/user/resetPwd'" @click="handleResetPwd(row)">重置密码</el-button><el-button v-auth="'api/v1/system/user/delete'" type="danger" @click="onRowDel(row)">删除</el-button></div></template></MobileRecordList>
     <pagination
         v-show="tableData.total>0"
         :total="tableData.total"
