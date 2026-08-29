@@ -37,7 +37,7 @@
           </el-form-item>
         </el-form>
 			</div>
-			<MobileRecordList :data="flattenTree(menuTableData)" row-key="path" data-mobile-view="system-menu"><template #desktop><el-table :data="menuTableData" style="width: 100%" row-key="path" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
+			<MobileRecordList :data="mobileMenuRows(menuTableData)" row-key="id" data-mobile-view="system-menu"><template #desktop><el-table :data="menuTableData" style="width: 100%" row-key="path" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
 				<el-table-column label="菜单名称" show-overflow-tooltip>
 					<template #default="scope">
 						<SvgIcon :name="scope.row.icon" />
@@ -95,6 +95,7 @@ const state = reactive({
   menuTableData:[],
 });
 const {queryParams,menuTableData} = toRefs(state);
+const mobileMenuRows = (rows: any[], depth = 0): any[] => rows.flatMap((row: any) => [{ ...row, title: `${'—'.repeat(depth)}${row.title || ''}` }, ...mobileMenuRows(row.children || [], depth + 1)]);
 const {proxy} = getCurrentInstance() as any;
 const {sys_show_hide} = proxy.useDict('sys_show_hide')
 const acType = ref('add')

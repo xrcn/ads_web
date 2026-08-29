@@ -28,7 +28,7 @@
           </el-form-item>
         </el-form>
       </div>
-			<MobileRecordList :data="flattenTree(tableData.data)" row-key="deptId" data-mobile-view="system-dept"><template #desktop><el-table
+			<MobileRecordList :data="mobileDeptRows(tableData.data)" row-key="deptId" data-mobile-view="system-dept"><template #desktop><el-table
 				:data="tableData.data"
 				style="width: 100%"
 				row-key="deptId"
@@ -102,6 +102,7 @@ const state = reactive<TableDataState>({
   },
 });
 const { tableData } = toRefs(state);
+const mobileDeptRows = (rows: any[], depth = 0): any[] => rows.flatMap((row: any) => [{ ...row, deptName: `${'—'.repeat(depth)}${row.deptName || ''}` }, ...mobileDeptRows(row.children || [], depth + 1)]);
 // 初始化表格数据
 const initTableData = () => {
   deptList();

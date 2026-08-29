@@ -126,7 +126,7 @@
 						<el-alert v-if="memberPanel(row).result" :title="memberPanel(row).result" type="success" show-icon :closable="false" class="mb10" />
 						<p class="member-mobile-sync-time">最近成功同步：{{ memberPanel(row).lastSuccessfulSyncAt || '-' }}</p>
 						<div v-for="member in memberPanel(row).list" :key="member.wxid" class="member-mobile-card">
-							<strong>{{ member.displayName || member.nickName || '-' }}</strong>
+							<div class="mobile-record-card__header"><strong>{{ member.displayName || member.nickName || '-' }}</strong><el-avatar :size="34" :src="member.smallHeadImgUrl || member.bigHeadImgUrl">-</el-avatar></div>
 							<dl class="mobile-record-card__fields">
 								<div><dt>wxid</dt><dd>{{ member.wxid || '-' }}</dd></div>
 								<div><dt>在群状态</dt><dd>{{ member.isPresent ? '在群' : '已离群' }}</dd></div>
