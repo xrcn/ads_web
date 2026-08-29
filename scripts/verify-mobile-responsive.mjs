@@ -30,7 +30,7 @@ const checks = {
   ],
   monitor: [
     ['src/views/wechat/monitor/index.vue', ['data-mobile-view="wechat-monitor-accounts"', 'data-mobile-view="wechat-monitor-events"']],
-    ['src/views/wechat/robotConfig/index.vue', ['mobile-robot-config', 'mobile-record-card__fields', 'width: 100% !important']],
+    ['src/views/wechat/robotConfig/index.vue', ['mobile-robot-config', 'mobile-record-card__fields', 'mobile-config-tabs-collapsed', 'width: 100% !important']],
   ],
   system: [
     ['src/views/system/config/index.vue', ['data-mobile-view="system-config"']],

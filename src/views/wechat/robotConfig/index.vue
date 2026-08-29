@@ -27,7 +27,7 @@
 					</el-descriptions-item>
 				</el-descriptions>
 
-				<el-tabs v-model="activeTab" :tab-position="tabPosition" class="config-tabs">
+				<el-tabs v-model="activeTab" :tab-position="tabPosition" class="config-tabs mobile-config-tabs-collapsed">
 					<el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
 						<template v-if="tab.name === 'basic'">
 							<div class="panel-heading">
@@ -261,5 +261,5 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 .exception-form{display:grid;grid-template-columns:110px 1fr auto;gap:8px;margin:12px 0}
 .form-tip{margin-left:12px;color:var(--el-text-color-secondary);font-size:12px}.statistics-preview pre{margin:0;white-space:pre-wrap;line-height:1.8;font-family:"LXGW WenKai",serif}
 .template-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) 160px;gap:10px;margin-bottom:12px}.template-command-editor{padding:12px 18px}.scenario-card{margin:10px 0}.scenario-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.variable-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.template-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}.multiline-text{white-space:pre-line}
-@media (max-width: 768px) { .mobile-robot-config { .config-header,.header-actions,.panel-heading,.scenario-header,.admin-toolbar { width:100%;align-items:stretch;flex-direction:column; } .header-actions :deep(.el-select),.template-toolbar,.exception-form { width:100%;grid-template-columns:minmax(0,1fr); } .config-tabs :deep(.el-tabs__nav-scroll) { overflow-x:auto; } .config-tabs :deep(.el-table) { display:none; } .overview-status :deep(td),.overview-status :deep(.el-descriptions__content) { overflow-wrap:anywhere; } :deep(.el-drawer) { width: 100% !important; } .robot-config-mobile-summary{display:grid} } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
+@media (max-width: 768px) { .mobile-robot-config { .config-header,.header-actions,.panel-heading,.scenario-header,.admin-toolbar { width:100%;align-items:stretch;flex-direction:column; } .header-actions :deep(.el-select),.template-toolbar,.exception-form { width:100%;grid-template-columns:minmax(0,1fr); } .config-tabs :deep(.el-tabs__nav-scroll) { overflow-x:auto; } .config-tabs :deep(.el-table) { display:none; } .overview-status :deep(td),.overview-status :deep(.el-descriptions__content) { overflow-wrap:anywhere; } :deep(.el-drawer) { width: 100% !important; } .robot-config-mobile-summary{display:grid} } .mobile-config-tabs-collapsed { min-height:0; } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
 </style>
