@@ -1,6 +1,8 @@
 <template>
 	<div class="wechat-message-container">
 		<el-card shadow="hover">
+			<MobileRecordList :data="list" :loading="loading" row-key="id" filter-summary="当前筛选" data-mobile-view="wechat-message">
+			<template #filters>
 			<el-form :model="query" inline label-width="78px" class="mb15">
 				<el-form-item label="接收日期">
 					<el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" />
@@ -29,7 +31,9 @@
 					<el-button @click="reset">重置</el-button>
 				</el-form-item>
 			</el-form>
+			</template>
 
+			<template #desktop>
 			<el-table v-loading="loading" :data="list" border stripe>
 				<el-table-column prop="receivedAt" label="接收时间" width="170" />
 				<el-table-column prop="groupName" label="微信群" min-width="150" show-overflow-tooltip>
@@ -49,6 +53,14 @@
 					<template #default="{ row }"><el-button text type="primary" @click="openDetail(row.id)">详情</el-button></template>
 				</el-table-column>
 			</el-table>
+			</template>
+			<template #default="{ row }">
+				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.receivedAt || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.groupName || row.groupWxid || '-' }}</p></div><el-tag :type="statusType(row.status)">{{ row.status || '-' }}</el-tag></div>
+				<dl class="mobile-record-card__fields"><div><dt>发送者</dt><dd>{{ row.senderWxid || '-' }}</dd></div><div><dt>消息内容</dt><dd>{{ row.content || '-' }}</dd></div><div><dt>回复内容</dt><dd>{{ row.replyContent || '-' }}</dd></div></dl>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>命令</dt><dd>{{ commandLabel(row.commandName) }}</dd></div><div><dt>错误</dt><dd>{{ row.errorMessage || '-' }}</dd></div><div><dt>群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div></dl></details>
+				<div class="mobile-record-card__actions"><el-button type="primary" @click="openDetail(row.id)">详情</el-button></div>
+			</template>
+			</MobileRecordList>
 			<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadList" />
 		</el-card>
 

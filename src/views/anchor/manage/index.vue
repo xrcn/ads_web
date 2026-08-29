@@ -1,5 +1,7 @@
 <template>
 	<div class="anchor-manage-container"><el-card shadow="hover">
+		<el-button class="mobile-record-list__filter-toggle" @click="mobileFilterOpen = !mobileFilterOpen"><el-icon><ele-Filter /></el-icon><span>筛选条件</span><el-icon><ele-ArrowDown v-if="!mobileFilterOpen" /><ele-ArrowUp v-else /></el-icon></el-button>
+		<div :class="['mobile-record-list__filter-content', { 'is-open': mobileFilterOpen }]">
 		<el-form :model="query" ref="queryRef" :inline="true" label-width="76px" class="mb15">
 			<el-form-item label="关键词"><el-input v-model="query.nickname" placeholder="主播/微信/群昵称或姓名" clearable /></el-form-item>
 			<el-form-item label="主播ID"><el-input v-model="query.anchorId" clearable /></el-form-item>
@@ -12,6 +14,7 @@
 			<el-form-item label="记录状态"><el-select v-model="query.recordState"><el-option label="正常" value="ACTIVE"/><el-option label="已删除" value="DELETED"/><el-option label="已忽略" value="IGNORED"/></el-select></el-form-item>
 			<el-form-item><el-button type="primary" @click="loadList">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button type="success" plain @click="openAddDialog">新增主播</el-button></el-form-item>
 		</el-form>
+		</div>
 		<div class="mb15"><el-button v-auth="'api/v1/system/anchor/profile/batchDelete'" type="danger" plain @click="batch('DELETE')">批量删除</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchIgnore'" type="warning" plain @click="batch('IGNORE')">批量忽略</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchCancelIgnore'" plain @click="batch('CANCEL_IGNORE')">取消忽略</el-button></div>
 		<AnchorList ref="anchorListRef" :query="query" :hall-options="hallOptions" :platform-options="platformOptions" />
 	</el-card></div>
@@ -24,7 +27,7 @@ import AnchorList from '/@/views/anchor/manage/component/anchorList.vue';
 import { getAnchorHallOptions, getAnchorPlatformOptions } from '/@/api/anchor';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 defineOptions({ name: 'anchorManage' });
-const queryRef=ref<FormInstance>(); const anchorListRef=ref(); const hallOptions=ref<any[]>([]); const platformOptions=ref<any[]>([]); const groupOptions=ref<any[]>([]);
+const queryRef=ref<FormInstance>(); const anchorListRef=ref(); const hallOptions=ref<any[]>([]); const platformOptions=ref<any[]>([]); const groupOptions=ref<any[]>([]); const mobileFilterOpen=ref(false);
 const defaults={anchorId:'',nickname:'',mobile:'',hallId:'',platformCode:'',groupId:'',bindingStatus:'',presenceStatus:'',completeness:'',recordState:'ACTIVE',status:''}; const query=reactive({...defaults});
 const loadList=()=>anchorListRef.value?.loadList(); const openAddDialog=()=>anchorListRef.value?.openAddDialog(); const batch=(action:string)=>anchorListRef.value?.runBatch(action);
 const resetQuery=()=>{ queryRef.value?.resetFields(); Object.assign(query,defaults); loadList(); };

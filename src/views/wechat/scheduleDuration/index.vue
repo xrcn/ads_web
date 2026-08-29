@@ -16,7 +16,7 @@
 				<el-col :xs="12" :sm="6"><el-statistic title="总时长（小时）" :value="hours(summary.totalMinutes)" :precision="2" /></el-col>
 			</el-row>
 
-			<el-table v-loading="loading" :data="details" border stripe>
+			<MobileRecordList :data="details" :loading="loading" row-key="id" data-mobile-view="schedule-duration"><template #desktop><el-table v-loading="loading" :data="details" border stripe>
 				<el-table-column prop="businessDate" label="日期" width="110" />
 				<el-table-column prop="groupName" label="微信群" min-width="150" show-overflow-tooltip />
 				<el-table-column prop="memberName" label="主播昵称" min-width="130" show-overflow-tooltip />
@@ -28,7 +28,12 @@
 				<el-table-column label="状态" width="85" align="center"><template #default="{ row }"><el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status === 'ACTIVE' ? '有效' : '已作废' }}</el-tag></template></el-table-column>
 				<el-table-column prop="lastReason" label="最后原因" min-width="140" show-overflow-tooltip />
 				<el-table-column label="操作" width="150" fixed="right"><template #default="{ row }"><el-button text type="primary" @click="openDetail(row)">详情</el-button><el-button v-if="row.status === 'ACTIVE'" text type="primary" @click="openEdit(row)">修正</el-button><el-button v-if="row.status === 'ACTIVE'" text type="danger" @click="voidRecord(row)">作废</el-button></template></el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }">
+				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.memberName || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.businessDate || '-' }}</p></div><el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status === 'ACTIVE' ? '有效' : '已作废' }}</el-tag></div>
+				<dl class="mobile-record-card__fields"><div><dt>微信群</dt><dd>{{ row.groupName || '-' }}</dd></div><div><dt>时段</dt><dd>{{ row.enteredAt || '-' }} 至 {{ row.leftAt || '-' }}</dd></div><div><dt>时长</dt><dd>{{ row.minutes }} 分钟（{{ row.source === 'MANUAL' ? '手工补录' : '自动统计' }}）</dd></div></dl>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>主播 wxid</dt><dd>{{ row.memberWxid || '-' }}</dd></div><div><dt>最后原因</dt><dd>{{ row.lastReason || '-' }}</dd></div></dl></details>
+				<div class="mobile-record-card__actions"><el-button type="primary" @click="openDetail(row)">详情</el-button><el-button v-if="row.status === 'ACTIVE'" @click="openEdit(row)">修正</el-button><el-dropdown v-if="row.status === 'ACTIVE'"><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item><el-button text type="danger" @click="voidRecord(row)">作废</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+			</template></MobileRecordList>
 		</el-card>
 
 		<el-drawer v-model="detailVisible" title="主播麦序时长详情" size="520px">

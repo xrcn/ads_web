@@ -1,6 +1,8 @@
 <template>
 	<div class="wechat-message-template-container">
 		<el-card shadow="hover">
+			<MobileRecordList :data="list" :loading="loading" filter-summary="当前筛选" data-mobile-view="wechat-template">
+			<template #filters>
 			<el-form :model="query" inline label-width="88px" class="mb15">
 				<el-form-item label="命令名称"><el-input v-model="query.commandName" clearable placeholder="请输入命令名称" @keyup.enter="loadList" /></el-form-item>
 				<el-form-item label="触发口令"><el-input v-model="query.aliasText" clearable placeholder="请输入触发口令" @keyup.enter="loadList" /></el-form-item>
@@ -9,7 +11,9 @@
 				<el-form-item label="状态"><el-select v-model="query.status" clearable placeholder="全部" style="width: 140px"><el-option label="全部启用" value="ALL_ENABLED" /><el-option label="部分启用" value="PARTIAL_ENABLED" /><el-option label="全部停用" value="ALL_DISABLED" /></el-select></el-form-item>
 				<el-form-item><el-button type="primary" @click="loadList">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupAdd'" type="success" plain @click="openAdd">新增群私有模板</el-button></el-form-item>
 			</el-form>
+			</template>
 
+			<template #desktop>
 			<el-table v-loading="loading" :data="list" border stripe>
 				<el-table-column type="expand" width="48">
 					<template #default="{ row }">
@@ -35,6 +39,14 @@
 				<el-table-column prop="updatedAt" label="更新时间" width="170" />
 				<el-table-column label="操作" width="220" fixed="right"><template #default="{ row }"><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupEdit'" text type="primary" @click="openEdit(row)">编辑</el-button><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupStatus'" text type="primary" @click="toggleStatus(row)">{{ row.status === 'ALL_DISABLED' ? '全部启用' : '全部停用' }}</el-button><el-button v-if="row.scopeType === 'PUBLIC'" v-auth="'api/v1/system/wechatMessageTemplate/groupReset'" text type="primary" @click="resetPublic(row)">恢复默认</el-button><el-button v-else v-auth="'api/v1/system/wechatMessageTemplate/groupDelete'" text type="danger" @click="deleteGroup(row)">删除</el-button></template></el-table-column>
 			</el-table>
+			</template>
+			<template #default="{ row }">
+				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.commandName || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.triggerKind === 'AUTO' ? row.triggerDescription || '自动触发' : compactCommandUsage(row.commandUsage) }}</p></div><el-tag :type="groupStatusMeta(row.status).type">{{ groupStatusMeta(row.status).label }}</el-tag></div>
+				<dl class="mobile-record-card__fields"><div><dt>类型</dt><dd>{{ row.scopeType === 'PUBLIC' ? '公共' : '群私有' }}</dd></div><div><dt>场景数量</dt><dd>{{ row.scenarios?.length || 0 }}</dd></div><div><dt>生效群</dt><dd>{{ row.scopeType === 'PUBLIC' ? '全部微信群' : row.groupName || '-' }}</dd></div></dl>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>更新时间</dt><dd>{{ row.updatedAt || '-' }}</dd></div><div><dt>触发规则</dt><dd>{{ row.triggerDescription || '-' }}</dd></div></dl></details>
+				<div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupEdit'" type="primary" @click="openEdit(row)">编辑</el-button><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupStatus'" @click="toggleStatus(row)">{{ row.status === 'ALL_DISABLED' ? '全部启用' : '全部停用' }}</el-button><el-dropdown><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item v-if="row.scopeType === 'PUBLIC'"><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupReset'" text @click="resetPublic(row)">恢复默认</el-button></el-dropdown-item><el-dropdown-item v-else><el-button v-auth="'api/v1/system/wechatMessageTemplate/groupDelete'" text type="danger" @click="deleteGroup(row)">删除</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+			</template>
+			</MobileRecordList>
 			<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadList" />
 		</el-card>
 

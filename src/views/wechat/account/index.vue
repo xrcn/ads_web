@@ -1,6 +1,8 @@
 <template>
 	<div class="wechat-robot-account-container">
 		<el-card shadow="hover">
+			<MobileRecordList :data="list" :loading="loading" row-key="id" filter-summary="当前筛选" data-mobile-view="wechat-account">
+			<template #filters>
 			<el-form :model="query" inline label-width="80px" class="mb15">
 				<el-form-item label="机器人名称">
 					<el-input v-model="query.robotName" placeholder="请输入机器人名称" clearable style="width: 220px" @keyup.enter="loadList" />
@@ -23,7 +25,9 @@
 					<el-button v-auth="'api/v1/system/wechatRobotAccount/add'" type="success" plain @click="openAdd">新增微信账号</el-button>
 				</el-form-item>
 			</el-form>
+			</template>
 
+			<template #desktop>
 			<el-table v-loading="loading" :data="list" border stripe>
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column prop="robotName" label="机器人名称" min-width="140" show-overflow-tooltip />
@@ -60,6 +64,14 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			</template>
+			<template #default="{ row }">
+				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.robotName || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.nickname || '-' }}</p></div><el-tag :type="row.isOnline === 1 ? 'success' : 'info'">{{ row.isOnline === 1 ? '在线' : '离线' }}</el-tag></div>
+				<dl class="mobile-record-card__fields"><div><dt>appId</dt><dd>{{ row.appId || '-' }}</dd></div><div><dt>wxid</dt><dd>{{ row.wxid || '-' }}</dd></div><div><dt>微信号</dt><dd>{{ row.wechatNo || '-' }}</dd></div></dl>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>状态</dt><dd>{{ row.status === 1 ? '启用' : '停用' }}</dd></div><div><dt>默认</dt><dd>{{ row.isDefault === 1 ? '默认账号' : '-' }}</dd></div><div><dt>更新时间</dt><dd>{{ row.updatedAt || '-' }}</dd></div><div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div></dl></details>
+				<div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/wechatRobotAccount/edit'" type="primary" @click="openEdit(row)">编辑</el-button><el-button v-auth="'api/v1/system/wechatRobotAccount/default'" @click="handleDefault(row)">设默认</el-button><el-dropdown><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotAccount/status'" text @click="handleToggleStatus(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+			</template>
+			</MobileRecordList>
 
 			<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadList" />
 		</el-card>

@@ -1,6 +1,6 @@
 <template>
 	<div class="anchor-mic-list-container">
-		<el-table :data="tableData.data" style="width: 100%">
+		<MobileRecordList :data="tableData.data" row-key="id" data-mobile-view="anchor-mic"><template #desktop><el-table :data="tableData.data" style="width: 100%">
 			<el-table-column prop="statDate" label="日期" min-width="110" />
 			<el-table-column prop="nickname" label="主播昵称" min-width="120" />
 			<el-table-column prop="hallName" label="所属厅" min-width="120" />
@@ -16,7 +16,12 @@
 					<el-button size="small" text type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
 				</template>
 			</el-table-column>
-		</el-table>
+		</el-table></template><template #default="{ row }">
+			<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.nickname || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.statDate || '-' }}</p></div></div>
+			<dl class="mobile-record-card__fields"><div><dt>所属厅</dt><dd>{{ row.hallName || '-' }}</dd></div><div><dt>主持时段</dt><dd>{{ row.hostSlots || '-' }}</dd></div><div><dt>接档时段</dt><dd>{{ row.shiftSlots || '-' }}</dd></div><div><dt>总麦序</dt><dd>{{ row.totalHours || 0 }} 小时 / {{ row.jobCount || 0 }} 作业</dd></div></dl>
+			<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>主持小时数</dt><dd>{{ row.hostHours || 0 }}</dd></div><div><dt>接档小时数</dt><dd>{{ row.shiftHours || 0 }}</dd></div><div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div></dl></details>
+			<div class="mobile-record-card__actions"><el-button type="primary" @click="openEditDialog(row)">编辑</el-button></div>
+		</template></MobileRecordList>
 		<pagination
 			v-show="tableData.total > 0"
 			:total="tableData.total"
