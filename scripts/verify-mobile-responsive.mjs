@@ -87,6 +87,7 @@ if (selected.includes('business')) {
   for (const pattern of ['deleteLegacyAnchor', "row.recordType==='PROFILE'?row.profileId:0", "row.recordType==='LEGACY_ANCHOR'?row.id:0", '@click="deleteRow(row)"']) {
     assert.ok((anchorSource + anchorApiSource).includes(pattern), `anchor ownership UI is missing: ${pattern}`);
   }
+  assert.ok(anchorSource.includes('存在工资卡时将拒绝删除；已有麦序历史会保留。'), 'legacy delete confirmation must describe soft-delete behavior');
   assert.ok(anchorSource.includes("const hasBankCardOwner=(row:any)=>row.bindings?.some((binding:any)=>binding.anchorId&&binding.hallId);"), 'bank card entry must require both anchor id and hall');
   assert.equal(anchorSource.split('v-if="hasBankCardOwner(row)"').length - 1, 2, 'desktop and mobile must share the bank card visibility rule');
   assert.equal(anchorSource.split('@click="openBankCardDialog(row)"').length - 1, 2, 'desktop and mobile must share the bank card row handler');
