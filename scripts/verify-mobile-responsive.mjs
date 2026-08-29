@@ -69,6 +69,10 @@ for (const name of selected) {
 
 if (selected.includes('business')) {
   const anchorSource = readFileSync(resolve(root, 'src/views/anchor/manage/component/anchorList.vue'), 'utf8');
+  const anchorApiSource = readFileSync(resolve(root, 'src/api/anchor/index.ts'), 'utf8');
+  const editAnchorSource = readFileSync(resolve(root, 'src/views/anchor/manage/component/editAnchor.vue'), 'utf8');
+  const bankCardDialogSource = readFileSync(resolve(root, 'src/views/anchor/manage/component/bankCardDialog.vue'), 'utf8');
+  const editBankCardSource = readFileSync(resolve(root, 'src/views/anchor/manage/component/editBankCard.vue'), 'utf8');
   const desktopSection = anchorSource.split('<template #desktop>')[1]?.split('</el-table></template>')[0] || '';
   const mobileSection = anchorSource.split('<template #default="{ row }">')[1]?.split('</template></MobileRecordList>')[0] || '';
   for (const label of ['label="微信昵称"', 'label="wxid"', 'label="手机号"']) {
@@ -79,6 +83,17 @@ if (selected.includes('business')) {
   }
   for (const pattern of ['row.wechatNickname', 'row.memberWxid', 'row.profileCompleteness', 'row.bindingStatus', 'row.mobile', 'row.updatedAt', '<details']) {
     assert.ok(!mobileSection.includes(pattern), `anchor mobile should hide: ${pattern}`);
+  }
+  for (const pattern of ['deleteLegacyAnchor', "row.recordType==='PROFILE'?row.profileId:0", "row.recordType==='LEGACY_ANCHOR'?row.id:0", '@click="deleteRow(row)"']) {
+    assert.ok((anchorSource + anchorApiSource).includes(pattern), `anchor ownership UI is missing: ${pattern}`);
+  }
+  assert.ok(!anchorSource.includes('v-if="row.bindings?.length"'), 'bank card entry must be visible for every anchor row');
+  assert.equal(anchorSource.split('@click="openBankCardDialog(row)"').length - 1, 2, 'desktop and mobile must share the bank card row handler');
+  for (const pattern of ['class="profile-hall-field"', 'v-model="form.hallId"', "hallId:form.hallId||''"]) {
+    assert.ok(editAnchorSource.includes(pattern), `anchor profile hall editor is missing: ${pattern}`);
+  }
+  for (const pattern of ['profileId', 'anchorInfoId']) {
+    assert.ok(bankCardDialogSource.includes(pattern) && editBankCardSource.includes(pattern), `bank card owner field is missing: ${pattern}`);
   }
 }
 

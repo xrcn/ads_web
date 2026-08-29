@@ -70,6 +70,7 @@ const formRef = ref<FormInstance>();
 
 const createForm = () => ({
 	id: 0,
+	profileId: 0,
 	anchorInfoId: 0,
 	accountName: '',
 	idCardNo: '',
@@ -98,7 +99,8 @@ const resetForm = () => {
 
 const openDialog = (anchorRow: any, row?: any) => {
 	resetForm();
-	form.anchorInfoId = anchorRow.id;
+	form.profileId = anchorRow.profileId || 0;
+	form.anchorInfoId = anchorRow.anchorInfoId || 0;
 	visible.value = true;
 	if (!row) return;
 	getAnchorBankCardDetail(row.id).then((res: any) => {

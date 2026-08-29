@@ -53,30 +53,32 @@ const editBankCardRef = ref();
 const visible = ref(false);
 const list = ref<any[]>([]);
 const currentAnchor = reactive({
-	id: 0,
+	profileId: 0,
+	anchorInfoId: 0,
 	nickname: '',
 });
 
 const loadList = () => {
-	if (!currentAnchor.id) return;
-	getAnchorBankCardList(currentAnchor.id).then((res: any) => {
+	if (!currentAnchor.profileId && !currentAnchor.anchorInfoId) return;
+	getAnchorBankCardList({ profileId: currentAnchor.profileId, anchorInfoId: currentAnchor.anchorInfoId }).then((res: any) => {
 		list.value = res.data.list ?? [];
 	});
 };
 
 const openDialog = (row: any) => {
-	currentAnchor.id = row.id;
+	currentAnchor.profileId = row.profileId || 0;
+	currentAnchor.anchorInfoId = row.anchorInfoId || 0;
 	currentAnchor.nickname = row.nickname;
 	visible.value = true;
 	loadList();
 };
 
 const openAddDialog = () => {
-	editBankCardRef.value?.openDialog({ id: currentAnchor.id, nickname: currentAnchor.nickname });
+	editBankCardRef.value?.openDialog({ ...currentAnchor });
 };
 
 const openEditDialog = (row: any) => {
-	editBankCardRef.value?.openDialog({ id: currentAnchor.id, nickname: currentAnchor.nickname }, row);
+	editBankCardRef.value?.openDialog({ ...currentAnchor }, row);
 };
 
 const setDefault = (row: any) => {

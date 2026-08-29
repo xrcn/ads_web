@@ -56,12 +56,15 @@ export const previewAnchorBatch = (data: object) => request({ url: '/api/v1/syst
 export const deleteAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchDelete', method: 'post', data });
 export const ignoreAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchIgnore', method: 'post', data });
 export const cancelIgnoreAnchorProfiles = (data: object) => request({ url: '/api/v1/system/anchor/profile/batchCancelIgnore', method: 'post', data });
+export const deleteLegacyAnchor = (id: number) => request({ url: '/api/v1/system/anchor/delete', method: 'delete', data: { id } });
 
-export function getAnchorBankCardList(anchorInfoId: number) {
+export type AnchorBankCardOwner = { profileId: number; anchorInfoId: number };
+
+export function getAnchorBankCardList(params: AnchorBankCardOwner) {
 	return request({
 		url: '/api/v1/system/anchor/bankCard/list',
 		method: 'get',
-		params: { anchorInfoId },
+		params,
 	});
 }
 
