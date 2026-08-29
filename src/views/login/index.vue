@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container" :style="loginContainerStyle">
+  <div class="login-container mobile-login-shell" :style="loginContainerStyle">
     <div class="login-content-out">
       <div class="login-content">
         <div class="login-content-main">

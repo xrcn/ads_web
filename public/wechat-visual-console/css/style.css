@@ -4112,3 +4112,54 @@ textarea::placeholder {
     min-height: 0;
   }
 }
+
+@media (max-width: 768px) {
+  .layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .layout-body {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .layout-aside {
+    width: 100%;
+    flex: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .side-menu {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    padding: 8px;
+  }
+
+  .side-menu li {
+    flex: none;
+  }
+
+  .side-menu a {
+    margin: 0 4px 0 0;
+    white-space: nowrap;
+  }
+
+  .layout-main {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .login-col-left.login-console-main,
+  .login-module.login-split,
+  .panel.active {
+    width: 100%;
+    max-width: none;
+  }
+}

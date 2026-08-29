@@ -31,18 +31,49 @@
 /* 页面宽度小于576px
 ------------------------------- */
 @media screen and (max-width: $xs) {
-	.login-container {
-		.login-icon-group {
-			display: none !important;
+	.login-container.mobile-login-shell {
+		min-height: 100dvh;
+		height: auto;
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+
+		.login-content-out {
+			flex: 1 0 auto;
+			height: auto;
+			padding: 24px 16px 12px;
+			box-sizing: border-box;
 		}
+
+		.login-icon-group {
+			display: block !important;
+			height: auto;
+		}
+
+		.login-icon-group-title {
+			margin-bottom: 18px;
+
+			img {
+				width: min(220px, 72vw);
+			}
+		}
+
 		.login-content {
 			width: 100% !important;
-			height: 100% !important;
-			padding: 20px 0 !important;
-			border-radius: 0 !important;
-			box-shadow: unset !important;
-			border: none !important;
+			max-width: 430px;
+			height: auto !important;
+			padding: 24px 0 !important;
+			border-radius: 12px !important;
+			box-sizing: border-box;
 		}
+
+		.login-footer {
+			position: static;
+			width: 100%;
+			padding: 0 16px 16px;
+			box-sizing: border-box;
+		}
+
 		.el-form-item {
 			display: flex !important;
 		}

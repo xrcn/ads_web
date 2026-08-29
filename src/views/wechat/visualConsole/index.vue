@@ -1,5 +1,5 @@
 <template>
-	<div class="wechat-visual-console-page">
+	<div class="wechat-visual-console-page mobile-console-host">
 		<iframe
 			v-if="!loadFailed"
 			ref="frameRef"
@@ -62,5 +62,12 @@ onUnmounted(() => window.removeEventListener('message', onFrameMessage));
 	height: 100%;
 	border: 0;
 	display: block;
+}
+
+@media (max-width: 768px) {
+	.wechat-visual-console-page.mobile-console-host {
+		min-height: calc(100dvh - 105px);
+		height: calc(100dvh - 105px);
+	}
 }
 </style>
