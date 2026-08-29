@@ -14,7 +14,7 @@
 
 			<template v-else-if="overview">
 				<div class="mobile-record-card__fields robot-config-mobile-summary"><div><dt>绑定机器人</dt><dd>{{ overview.robotName || '-' }}</dd></div><div><dt>群状态</dt><dd>{{ overview.groupStatus === 1 ? '启用' : '停用' }}</dd></div><div><dt>机器人状态</dt><dd>{{ robotAvailable ? '在线' : '不可用' }}</dd></div></div>
-				<el-descriptions :column="4" border class="mb15 overview-status">
+				<el-descriptions :column="tabPosition === 'top' ? 1 : 4" border class="mb15 overview-status">
 					<el-descriptions-item label="绑定机器人">{{ overview.robotName || '-' }}</el-descriptions-item>
 					<el-descriptions-item label="群状态">
 						<el-tag :type="overview.groupStatus === 1 ? 'success' : 'info'">{{ overview.groupStatus === 1 ? '启用' : '停用' }}</el-tag>
@@ -33,7 +33,7 @@
 							<div class="panel-heading">
 								<div><h4>基础信息</h4><p>本阶段仅展示数据库真实状态，不提供修改。</p></div>
 							</div>
-							<el-descriptions :column="2" border>
+							<el-descriptions :column="tabPosition === 'top' ? 1 : 2" border>
 								<el-descriptions-item label="微信群名称">{{ overview.groupName || '-' }}</el-descriptions-item>
 								<el-descriptions-item label="微信群 wxid">{{ overview.groupWxid || '-' }}</el-descriptions-item>
 								<el-descriptions-item label="厅号">{{ overview.hallNo || '未设置' }}</el-descriptions-item>
