@@ -1,6 +1,8 @@
 <template>
 	<div class="wechat-robot-group-container">
 		<el-card shadow="hover">
+			<MobileRecordList :data="list" :loading="loading" row-key="id" filter-summary="全部机器人 · 全部状态" data-mobile-view="wechat-group">
+			<template #filters>
 			<el-form :model="query" inline label-width="92px" class="mb15">
 				<el-form-item label="微信群名称">
 					<el-input v-model="query.groupName" placeholder="请输入微信群名称" clearable style="width: 220px" @keyup.enter="loadList" />
@@ -25,7 +27,9 @@
 					<el-button v-auth="'api/v1/system/wechatRobotGroup/add'" type="success" plain @click="openAdd">新增微信群</el-button>
 				</el-form-item>
 			</el-form>
+			</template>
 
+			<template #desktop>
 			<el-table v-loading="loading" :data="list" border stripe row-key="id" @expand-change="handleMemberExpand">
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column v-if="canListMembers" type="expand" width="52">
@@ -87,6 +91,67 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			</template>
+
+			<template #default="{ row }">
+				<div class="mobile-record-card__header">
+					<div>
+						<h3 class="mobile-record-card__title">{{ row.groupName }}</h3>
+						<p class="mobile-record-card__subtitle">厅号 {{ row.hallNo || '-' }}</p>
+					</div>
+					<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
+				</div>
+				<dl class="mobile-record-card__fields">
+					<div><dt>绑定机器人</dt><dd>{{ row.robotName || '-' }}</dd></div>
+					<div><dt>排档状态</dt><dd>{{ row.runningStatus === 1 ? '运行中' : '未启动' }}</dd></div>
+					<div><dt>固定档</dt><dd>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</dd></div>
+				</dl>
+				<details class="mobile-record-card__details">
+					<summary>查看完整信息</summary>
+					<dl class="mobile-record-card__fields">
+						<div><dt>微信群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div>
+						<div><dt>机器人 appId</dt><dd>{{ row.appId || '-' }}</dd></div>
+						<div><dt>默认平台</dt><dd>{{ platformName(row.defaultPlatformCode) }}</dd></div>
+						<div><dt>默认厅</dt><dd>{{ hallName(row.defaultHallId) }}</dd></div>
+						<div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div>
+						<div v-if="canReadFixedSchedule"><dt>固定档设置</dt><dd><el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" /><span v-else>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</span></dd></div>
+					</dl>
+					<div v-if="canListMembers" class="member-mobile-cards">
+						<div class="group-member-toolbar">
+							<el-switch v-model="memberPanel(row).includeLeft" active-text="包含已离群成员" @change="loadMembers(row, true)" />
+							<el-button :loading="memberPanel(row).loading" @click="loadMembers(row)">加载群成员</el-button>
+							<el-button v-if="canSyncMembers" v-auth="'api/v1/system/wechatRobotGroup/memberSync'" type="primary" :loading="memberPanel(row).syncing" :disabled="row.status !== 1 || row.accountStatus !== 1" @click="syncMembers(row)">收集群成员</el-button>
+						</div>
+						<el-alert v-if="memberPanel(row).error" :title="memberPanel(row).error" type="error" show-icon :closable="false" class="mb10" />
+						<el-alert v-if="memberPanel(row).result" :title="memberPanel(row).result" type="success" show-icon :closable="false" class="mb10" />
+						<p class="member-mobile-sync-time">最近成功同步：{{ memberPanel(row).lastSuccessfulSyncAt || '-' }}</p>
+						<div v-for="member in memberPanel(row).list" :key="member.wxid" class="member-mobile-card">
+							<strong>{{ member.displayName || member.nickName || '-' }}</strong>
+							<dl class="mobile-record-card__fields">
+								<div><dt>wxid</dt><dd>{{ member.wxid || '-' }}</dd></div>
+								<div><dt>在群状态</dt><dd>{{ member.isPresent ? '在群' : '已离群' }}</dd></div>
+								<div><dt>邀请人</dt><dd>{{ member.inviterUserName || '-' }}</dd></div>
+								<div><dt>角色</dt><dd>{{ member.roles?.join('、') || '-' }}</dd></div>
+							</dl>
+						</div>
+					</div>
+				</details>
+				<div class="mobile-record-card__actions">
+					<el-button v-if="canViewRobotConfig" v-auth="'api/v1/system/wechatRobotGroup/configOverview'" type="primary" @click="openRobotConfig(row)">配置</el-button>
+					<el-button v-auth="'api/v1/system/wechatRobotGroup/edit'" @click="openEdit(row)">编辑</el-button>
+					<el-dropdown>
+						<el-button>更多</el-button>
+						<template #dropdown>
+							<el-dropdown-menu>
+								<el-dropdown-item><el-button v-auth-all="['api/v1/system/wechatRobotGroup/adminList', 'api/v1/system/wechatRobotGroup/queuePolicy']" text @click="openPolicy(row)">管理员与排麦策略</el-button></el-dropdown-item>
+								<el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text @click="handleToggleStatus(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button></el-dropdown-item>
+								<el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus === 1 ? 'danger' : 'success'" @click="toggleRunning(row)">{{ row.runningStatus === 1 ? '停止排档' : '启动排档' }}</el-button></el-dropdown-item>
+							</el-dropdown-menu>
+						</template>
+					</el-dropdown>
+				</div>
+			</template>
+			</MobileRecordList>
 
 			<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadList" />
 		</el-card>
@@ -486,4 +551,7 @@ onMounted(() => {
 <style scoped>
 .group-member-panel { padding: 12px 20px; }
 .group-member-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.member-mobile-cards { display: grid; gap: 12px; }
+.member-mobile-card { padding: 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; }
+.member-mobile-sync-time { margin: 0; color: var(--el-text-color-secondary); }
 </style>
