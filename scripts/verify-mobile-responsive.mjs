@@ -21,7 +21,7 @@ const checks = {
     ['src/views/wechat/group/index.vue', ['<MobileRecordList', 'data-mobile-view="wechat-group"', 'mobile-record-card__details', 'member-mobile-cards']],
   ],
   business: [
-    ['src/views/anchor/manage/component/anchorList.vue', ['data-mobile-view="anchor-list"']],
+    ['src/views/anchor/manage/component/anchorList.vue', ['data-mobile-view="anchor-list"', '<el-avatar class="anchor-mobile-avatar" :src="row.avatar?getUpFileUrl(row.avatar):\'\'">']],
     ['src/views/wechat/message/index.vue', ['data-mobile-view="wechat-message"']],
     ['src/views/wechat/template/index.vue', ['data-mobile-view="wechat-template"']],
     ['src/views/wechat/account/index.vue', ['data-mobile-view="wechat-account"']],
