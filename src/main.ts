@@ -18,6 +18,7 @@ import {useDict} from '/@/api/system/dict/data';
 import {getItems, setItems, getOptionValue, isEmpty} from '/@/api/items'
 // 分页组件
 import pagination from '/@/components/pagination/index.vue'
+import MobileRecordList from '/@/components/mobileRecordList/index.vue';
 
 // 大文件上传组件
 // @ts-ignore
@@ -42,6 +43,7 @@ directive(app);
 other.elSvg(app);
 
 app.component('pagination', pagination)
+app.component('MobileRecordList', MobileRecordList);
 app.use(pinia)
     .use(uploader)
     .use(router)
