@@ -12,6 +12,8 @@
 			<el-form-item label="群状态"><el-select v-model="query.presenceStatus" clearable><el-option label="至少一群在群" value="PRESENT"/><el-option label="全部已离群" value="LEFT"/></el-select></el-form-item>
 			<el-form-item label="资料状态"><el-select v-model="query.completeness" clearable><el-option label="已完善" value="COMPLETE"/><el-option label="待完善" value="INCOMPLETE"/></el-select></el-form-item>
 			<el-form-item label="记录状态"><el-select v-model="query.recordState"><el-option label="正常" value="ACTIVE"/><el-option label="已删除" value="DELETED"/><el-option label="已忽略" value="IGNORED"/></el-select></el-form-item>
+			<el-form-item label="开播状态"><el-select v-model="query.vvCurrentLiveStatus" clearable><el-option label="未开播" value="未开播"/><el-option label="开播中" value="开播中"/></el-select></el-form-item>
+			<el-form-item label="账号状态"><el-select v-model="query.vvForbidStatus" clearable><el-option label="正常" value="0"/><el-option label="禁播中（官方）" value="1"/><el-option label="禁播中（公会）" value="2"/></el-select></el-form-item>
 			<el-form-item><el-button type="primary" @click="loadList">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button type="success" plain @click="openAddDialog">新增主播</el-button></el-form-item>
 		</el-form>
 		</div>
@@ -28,7 +30,7 @@ import { getAnchorHallOptions, getAnchorPlatformOptions } from '/@/api/anchor';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 defineOptions({ name: 'anchorManage' });
 const queryRef=ref<FormInstance>(); const anchorListRef=ref(); const hallOptions=ref<any[]>([]); const platformOptions=ref<any[]>([]); const groupOptions=ref<any[]>([]); const mobileFilterOpen=ref(false);
-const defaults={anchorId:'',nickname:'',mobile:'',hallId:'',platformCode:'',groupId:'',bindingStatus:'',presenceStatus:'',completeness:'',recordState:'ACTIVE',status:''}; const query=reactive({...defaults});
+const defaults={anchorId:'',nickname:'',mobile:'',hallId:'',platformCode:'',groupId:'',bindingStatus:'',presenceStatus:'',completeness:'',recordState:'ACTIVE',status:'',vvCurrentLiveStatus:'',vvForbidStatus:''}; const query=reactive({...defaults});
 const loadList=()=>anchorListRef.value?.loadList(); const openAddDialog=()=>anchorListRef.value?.openAddDialog(); const batch=(action:string)=>anchorListRef.value?.runBatch(action);
 const resetQuery=()=>{ queryRef.value?.resetFields(); Object.assign(query,defaults); loadList(); };
 onMounted(async()=>{ const [h,p,groups]:any[]=await Promise.all([getAnchorHallOptions(),getAnchorPlatformOptions(),getWechatRobotGroupList({pageNum:1,pageSize:1000})]); hallOptions.value=h.data.list??[]; platformOptions.value=p.data.list??[]; groupOptions.value=groups.data.list??[]; });
