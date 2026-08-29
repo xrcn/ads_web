@@ -23,7 +23,9 @@ import { Session } from '/@/utils/storage';
 
 const frameRef = ref<HTMLIFrameElement>();
 const loadFailed = ref(false);
-const consoleSrc = new URL(`${import.meta.env.BASE_URL}wechat-visual-console/index.html`, window.location.origin).toString();
+const consoleUrl = new URL(`${import.meta.env.BASE_URL}wechat-visual-console/index.html`, window.location.origin);
+consoleUrl.searchParams.set('v', '20260829-mobile-responsive');
+const consoleSrc = consoleUrl.toString();
 
 function sendBootstrap() {
 	frameRef.value?.contentWindow?.postMessage(
