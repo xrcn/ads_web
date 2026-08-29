@@ -70,7 +70,7 @@
 
 		<el-card shadow="hover" class="mb15">
 			<template #header><span>机器人状态</span></template>
-			<el-table v-loading="overviewLoading" :data="overview.accounts" border stripe>
+			<MobileRecordList :data="overview.accounts" :loading="overviewLoading" row-key="id" data-mobile-view="wechat-monitor-accounts"><template #desktop><el-table v-loading="overviewLoading" :data="overview.accounts" border stripe>
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column prop="robotName" label="机器人名称" min-width="140" show-overflow-tooltip />
 				<el-table-column prop="wechatNo" label="微信号" min-width="140" show-overflow-tooltip />
@@ -85,7 +85,7 @@
 				<el-table-column prop="callbackError" label="Callback 错误" min-width="200" show-overflow-tooltip>
 					<template #default="{ row }">{{ row.callbackError || '-' }}</template>
 				</el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.robotName }}</h3><el-tag :type="healthTagType(row.healthStatus)">{{ healthLabel(row.healthStatus) }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>微信号</dt><dd>{{ row.wechatNo || '-' }}</dd></div><div><dt>连续失败</dt><dd>{{ row.consecutiveFailures }}</dd></div><div><dt>最后检查</dt><dd>{{ formatTime(row.lastCheckedAt) }}</dd></div><div><dt>Callback</dt><dd>{{ formatTime(row.callbackConfiguredAt) }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整状态</summary><dl class="mobile-record-card__fields"><div><dt>离线时长</dt><dd>{{ formatDuration(row.offlineSince) }}</dd></div><div><dt>最后重连</dt><dd>{{ formatTime(row.lastReconnectAt) }}</dd></div><div><dt>Callback 错误</dt><dd>{{ row.callbackError || '-' }}</dd></div></dl></details></template></MobileRecordList>
 		</el-card>
 
 		<el-card shadow="hover">
@@ -116,7 +116,7 @@
 				<el-form-item><el-button type="primary" @click="loadEvents">查询</el-button><el-button @click="resetEventQuery">重置</el-button></el-form-item>
 			</el-form>
 
-			<el-table v-loading="eventsLoading" :data="eventList" border stripe>
+			<MobileRecordList :data="eventList" :loading="eventsLoading" row-key="id" data-mobile-view="wechat-monitor-events"><template #desktop><el-table v-loading="eventsLoading" :data="eventList" border stripe>
 				<el-table-column type="index" label="序号" width="70" />
 				<el-table-column prop="robotName" label="机器人名称" min-width="140" show-overflow-tooltip />
 				<el-table-column label="事件类型" min-width="140"><template #default="{ row }">{{ eventTypeLabel(row.eventType) }}</template></el-table-column>
@@ -126,7 +126,7 @@
 				<el-table-column label="恢复时间" min-width="170"><template #default="{ row }">{{ formatTime(row.resolvedAt) }}</template></el-table-column>
 				<el-table-column label="通知状态" min-width="110" align="center"><template #default="{ row }"><el-tag :type="notifyTagType(row.notifyStatus)">{{ row.notifyStatus || '-' }}</el-tag></template></el-table-column>
 				<el-table-column label="通知错误摘要" min-width="200" show-overflow-tooltip><template #default="{ row }">{{ row.notifyError || '-' }}</template></el-table-column>
-			</el-table>
+			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ eventTypeLabel(row.eventType) }}</h3><el-tag :type="row.status === 'OPEN' ? 'danger' : 'success'">{{ row.status === 'OPEN' ? '未恢复' : '已恢复' }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>机器人</dt><dd>{{ row.robotName || '-' }}</dd></div><div><dt>发生时间</dt><dd>{{ formatTime(row.startedAt) }}</dd></div><div><dt>摘要</dt><dd>{{ row.message || '-' }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看事件详情</summary><dl class="mobile-record-card__fields"><div><dt>恢复时间</dt><dd>{{ formatTime(row.resolvedAt) }}</dd></div><div><dt>通知状态</dt><dd>{{ row.notifyStatus || '-' }}</dd></div><div><dt>通知错误</dt><dd>{{ row.notifyError || '-' }}</dd></div></dl></details></template></MobileRecordList>
 			<pagination v-show="eventTotal > 0" v-model:page="eventQuery.pageNum" v-model:limit="eventQuery.pageSize" :total="eventTotal" @pagination="loadEvents" />
 		</el-card>
 	</div>

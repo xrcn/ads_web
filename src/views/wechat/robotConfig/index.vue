@@ -1,5 +1,5 @@
 <template>
-	<div class="wechat-robot-config-container">
+	<div class="wechat-robot-config-container mobile-robot-config">
 		<el-card v-if="canViewConfig" shadow="hover">
 			<div class="config-header">
 				<div>
@@ -13,6 +13,7 @@
 			<el-skeleton v-if="loading && !overview" :rows="6" animated />
 
 			<template v-else-if="overview">
+				<div class="mobile-record-card__fields robot-config-mobile-summary"><div><dt>绑定机器人</dt><dd>{{ overview.robotName || '-' }}</dd></div><div><dt>群状态</dt><dd>{{ overview.groupStatus === 1 ? '启用' : '停用' }}</dd></div><div><dt>机器人状态</dt><dd>{{ robotAvailable ? '在线' : '不可用' }}</dd></div></div>
 				<el-descriptions :column="4" border class="mb15 overview-status">
 					<el-descriptions-item label="绑定机器人">{{ overview.robotName || '-' }}</el-descriptions-item>
 					<el-descriptions-item label="群状态">
@@ -243,7 +244,7 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 </script>
 
 <style scoped lang="scss">
-.config-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; h3 { margin: 0 0 6px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; } }.header-actions{display:flex;align-items:center;gap:10px}.settings-preview{margin:0;white-space:pre-wrap;line-height:1.7;font-family:"LXGW WenKai",serif}
+.config-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; h3 { margin: 0 0 6px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 13px; } }.header-actions{display:flex;align-items:center;gap:10px}.settings-preview{margin:0;white-space:pre-wrap;line-height:1.7;font-family:"LXGW WenKai",serif}.robot-config-mobile-summary{display:none}
 .config-tabs { min-height: 480px; :deep(.el-tabs__content) { padding: 0 18px; } }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--el-border-color-lighter); h4 { margin: 0 0 5px; } p { margin: 0; color: var(--el-text-color-secondary); font-size: 12px; } }
 .error-text { color: var(--el-color-danger); }
@@ -252,5 +253,5 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 .exception-form{display:grid;grid-template-columns:110px 1fr auto;gap:8px;margin:12px 0}
 .form-tip{margin-left:12px;color:var(--el-text-color-secondary);font-size:12px}.statistics-preview pre{margin:0;white-space:pre-wrap;line-height:1.8;font-family:"LXGW WenKai",serif}
 .template-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) 160px;gap:10px;margin-bottom:12px}.template-command-editor{padding:12px 18px}.scenario-card{margin:10px 0}.scenario-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.variable-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.template-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}.multiline-text{white-space:pre-line}
-@media (max-width: 768px) { .config-header { align-items: flex-start; flex-direction: column; } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
+@media (max-width: 768px) { .mobile-robot-config { .config-header,.header-actions,.panel-heading,.scenario-header,.admin-toolbar { width:100%;align-items:stretch;flex-direction:column; } .header-actions :deep(.el-select),.template-toolbar,.exception-form { width:100%;grid-template-columns:minmax(0,1fr); } .config-tabs :deep(.el-tabs__nav-scroll) { overflow-x:auto; } .overview-status :deep(td),.overview-status :deep(.el-descriptions__content) { overflow-wrap:anywhere; } :deep(.el-drawer) { width: 100% !important; } .robot-config-mobile-summary{display:grid} } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
 </style>
