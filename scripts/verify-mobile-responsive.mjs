@@ -89,12 +89,13 @@ if (selected.includes('business')) {
   }
   assert.ok(!anchorSource.includes('v-if="row.bindings?.length"'), 'bank card entry must be visible for every anchor row');
   assert.equal(anchorSource.split('@click="openBankCardDialog(row)"').length - 1, 2, 'desktop and mobile must share the bank card row handler');
-  for (const pattern of ['class="profile-hall-field"', 'v-model="form.hallId"', "hallId:form.hallId||''"]) {
+  for (const pattern of ['class="profile-hall-field"', 'v-model="form.hallId"', "hallId:form.hallId||''", 'hallId:form.hallId||0']) {
     assert.ok(editAnchorSource.includes(pattern), `anchor profile hall editor is missing: ${pattern}`);
   }
   for (const pattern of ['profileId', 'anchorInfoId']) {
     assert.ok(bankCardDialogSource.includes(pattern) && editBankCardSource.includes(pattern), `bank card owner field is missing: ${pattern}`);
   }
+  assert.ok(editBankCardSource.includes('Object.assign(form,res.data,owner)'), 'bank card edit must preserve the owner used to open the dialog');
 }
 
 console.log(`MOBILE_RESPONSIVE_VERIFY_PASS phase=${phase}`);

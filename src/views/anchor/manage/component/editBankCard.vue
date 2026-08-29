@@ -99,12 +99,12 @@ const resetForm = () => {
 
 const openDialog = (anchorRow: any, row?: any) => {
 	resetForm();
-	form.profileId = anchorRow.profileId || 0;
-	form.anchorInfoId = anchorRow.anchorInfoId || 0;
+	const owner = { profileId: anchorRow.profileId || 0, anchorInfoId: anchorRow.anchorInfoId || 0 };
+	Object.assign(form, owner);
 	visible.value = true;
 	if (!row) return;
 	getAnchorBankCardDetail(row.id).then((res: any) => {
-		Object.assign(form, res.data);
+		Object.assign(form,res.data,owner);
 	});
 };
 
