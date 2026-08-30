@@ -35,12 +35,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { getAnchorActivityHallOptions, getAnchorActivityList, getAnchorActivityProgress, getAnchorActivitySummary, syncAnchorActivity } from '/@/api/system/flowData';
 import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
 
 defineOptions({ name: 'flowDataAnchorActivity' });
+const route = useRoute();
 
 const formatDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const defaultDateRange = () => {
@@ -50,10 +52,19 @@ const defaultDateRange = () => {
 	start.setDate(start.getDate() - 29);
 	return [formatDate(start), formatDate(end)];
 };
+const isDate = (value: unknown): value is string => {
+	if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+	const date = new Date(`${value}T00:00:00`);
+	return !Number.isNaN(date.getTime()) && formatDate(date) === value;
+};
+const routeDateRange = () => {
+	const { startDate, endDate } = route.query;
+	return isDate(startDate) && isDate(endDate) && startDate <= endDate ? [startDate, endDate] : null;
+};
 
 const syncing = ref(false);
 const halls = ref<any[]>([]);
-const dateRange = ref<string[] | null>(defaultDateRange());
+const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
 const query = reactive({ hallId: '' as string | number, anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
 const table = reactive({ list: [] as any[], total: 0, loading: false });
@@ -69,6 +80,13 @@ const load = async () => {
 		table.loading = false;
 	}
 };
+watch(() => [route.query.startDate, route.query.endDate], () => {
+	const range = routeDateRange();
+	if (!range || (dateRange.value?.[0] === range[0] && dateRange.value?.[1] === range[1])) return;
+	dateRange.value = range;
+	query.pageNum = 1;
+	void load();
+});
 const loadSummary = async () => Object.assign(summary, (await getAnchorActivitySummary() as any).data);
 const search = () => { query.pageNum = 1; void load(); };
 const resetQuery = () => {

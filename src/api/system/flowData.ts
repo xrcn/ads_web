@@ -37,6 +37,71 @@ export interface VVSyncProgress {
 	finishedAt: string;
 }
 
+export interface FlowDataHomeWindow {
+	hasData: boolean;
+	startDate: string;
+	endDate: string;
+	dayCount: number;
+	availableStartDate: string;
+	availableEndDate: string;
+}
+
+export interface FlowDataHomeMetrics {
+	totalFlow: string;
+	averageDailyFlow: string;
+	revenueAnchorCount: number;
+	activeAnchorRate: string;
+	averageDailyActiveAnchorCount: string;
+}
+
+export interface FlowDataHomeFlowPoint { statDate: string; totalFlow: string; }
+export interface FlowDataHomeHallFlowItem { hallId: number; hallName: string; totalFlow: string; }
+export interface FlowDataHomeActivePoint { statDate: string; activeAnchorCount: number; activeAnchorRate: string; }
+export interface FlowDataHomeAnchorFlowItem { anchorId: string; anchorName: string; hallId: number; hallName: string; totalFlow: string; }
+export interface FlowDataHomeAnchorActivityItem { anchorId: string; anchorName: string; hallId: number; hallName: string; activeDayCount: number; activityRate: string; sayHiNum: number; }
+
+export interface FlowDataHomeOverview {
+	window: FlowDataHomeWindow;
+	metrics: FlowDataHomeMetrics;
+	flowTrend: FlowDataHomeFlowPoint[];
+	hallFlowTop: FlowDataHomeHallFlowItem[];
+	activeAnchorTrend: FlowDataHomeActivePoint[];
+	anchorFlowTop: FlowDataHomeAnchorFlowItem[];
+	anchorActivityTop: FlowDataHomeAnchorActivityItem[];
+}
+
+export interface FlowDataHomeOverviewQuery { startDate?: string; endDate?: string; }
+export type FlowDataHomeRankingType = 'HALL_FLOW' | 'ANCHOR_FLOW' | 'ANCHOR_ACTIVITY';
+
+export interface FlowDataHomeRankingItem {
+	rank: number;
+	hallId: number;
+	hallName: string;
+	anchorId: string;
+	anchorName: string;
+	totalFlow: string;
+	activeDayCount: number;
+	activityRate: string;
+	sayHiNum: number;
+}
+
+export interface FlowDataHomeRanking {
+	rankingType: FlowDataHomeRankingType;
+	startDate: string;
+	endDate: string;
+	pageNum: number;
+	pageSize: number;
+	total: number;
+	list: FlowDataHomeRankingItem[];
+}
+
+export interface FlowDataHomeRankingQuery {
+	rankingType: FlowDataHomeRankingType;
+	startDate: string;
+	endDate: string;
+	pageNum: number;
+}
+
 export const syncFlowData = () => request({ url: '/api/v1/system/flowData/sync', method: 'post', timeout: 180000 });
 export const getFlowDataSummary = () => request({ url: '/api/v1/system/flowData/summary', method: 'get' });
 export const getVVSyncProgress = (syncType: VVSyncType) => request({ url: '/api/v1/system/flowData/progress', method: 'get', params: { syncType } });
@@ -57,3 +122,5 @@ export const getAnchorActivitySummary = () => request({ url: '/api/v1/system/flo
 export const getAnchorActivityList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorActivity/list', method: 'get', params });
 export const getAnchorActivityProgress = () => request({ url: '/api/v1/system/flowData/anchorActivity/progress', method: 'get' });
 export const getAnchorActivityHallOptions = () => request({ url: '/api/v1/system/flowData/anchorActivity/hallOptions', method: 'get' });
+export const getFlowDataHomeOverview = (params: FlowDataHomeOverviewQuery = {}) => request({ url: '/api/v1/system/flowData/homeOverview', method: 'get', params, __skipGlobalErrorMessage: true } as any);
+export const getFlowDataHomeRanking = (params: FlowDataHomeRankingQuery) => request({ url: '/api/v1/system/flowData/homeRanking', method: 'get', params, __skipGlobalErrorMessage: true } as any);

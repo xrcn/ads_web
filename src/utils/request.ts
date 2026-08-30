@@ -59,7 +59,7 @@ service.interceptors.response.use(
 					isRelogin = false;
 				});
 		} else if (code !== 0) {
-			ElMessage.error(res.message)
+			if (!(response.config as any).__skipGlobalErrorMessage) ElMessage.error(res.message)
 			return Promise.reject(new Error(res.message))
 		} else {
 			return res
@@ -67,6 +67,7 @@ service.interceptors.response.use(
 	},
 	(error) => {
 		// 对响应错误做点什么
+		if ((error.config as any)?.__skipGlobalErrorMessage) return Promise.reject(error);
 		if (error.message.indexOf('timeout') != -1) {
 			ElMessage.error('网络超时');
 		} else if (error.message == 'Network Error') {
