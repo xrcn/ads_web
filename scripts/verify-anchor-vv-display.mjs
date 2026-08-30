@@ -24,6 +24,18 @@ for (const [source, needle] of [
 	[list, '详情'],
 	[list, 'filter.vvCurrentLiveStatus'],
 	[list, 'filter.vvForbidStatus'],
+	[filters, 'v-model="query.platformCode" clearable placeholder="全部平台"'],
+	[filters, 'v-model="query.hallId" clearable placeholder="全部厅"'],
+	[filters, 'v-model="query.groupId" clearable filterable placeholder="全部微信群"'],
+	[filters, 'v-model="query.bindingStatus" clearable placeholder="全部绑定状态"'],
+	[filters, 'v-model="query.presenceStatus" clearable placeholder="全部群状态"'],
+	[filters, 'v-model="query.completeness" clearable placeholder="全部资料状态"'],
+	[filters, 'v-model="query.vvCurrentLiveStatus" clearable placeholder="全部开播状态"'],
+	[filters, 'v-model="query.vvForbidStatus" clearable placeholder="全部账号状态"'],
+	[filters, 'v-model="query.recordState"><el-option label="正常" value="ACTIVE"'],
+	[page, "recordState:'ACTIVE'"],
+	[page, 'Object.assign(query,defaults)'],
+	[page, '.mobile-record-list__filter-content :deep(.el-form-item .el-select) { width: 160px; }'],
 ]) {
 	if (!source.includes(needle)) throw new Error(`missing VV anchor display contract: ${needle}`);
 }

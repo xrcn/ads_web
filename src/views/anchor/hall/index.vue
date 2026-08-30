@@ -24,6 +24,7 @@
 						<el-table-column prop="hallName" label="厅名" min-width="130" show-overflow-tooltip />
 						<el-table-column prop="hallManager" label="厅管" min-width="110"><template #default="{ row }">{{ row.hallManager || '-' }}</template></el-table-column>
 						<el-table-column prop="hallAssistant" label="厅助理" min-width="110"><template #default="{ row }">{{ row.hallAssistant || '-' }}</template></el-table-column>
+						<el-table-column label="健康分" width="100" align="center"><template #default="{ row }"><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></template></el-table-column>
 						<el-table-column label="关联微信群" min-width="180" show-overflow-tooltip><template #default="{ row }">{{ hallGroupLabel(row) }}</template></el-table-column>
 						<el-table-column label="状态" width="90" align="center"><template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></template></el-table-column>
 						<el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
@@ -34,7 +35,7 @@
 
 				<template #default="{ row }">
 					<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.hallName }}</h3><p class="mobile-record-card__subtitle">厅 ID {{ row.hallId }}</p></div><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></div>
-					<dl class="mobile-record-card__fields"><div><dt>厅管</dt><dd>{{ row.hallManager || '-' }}</dd></div><div><dt>厅助理</dt><dd>{{ row.hallAssistant || '-' }}</dd></div><div><dt>关联微信群</dt><dd>{{ hallGroupLabel(row) }}</dd></div></dl>
+					<dl class="mobile-record-card__fields"><div><dt>厅管</dt><dd>{{ row.hallManager || '-' }}</dd></div><div><dt>厅助理</dt><dd>{{ row.hallAssistant || '-' }}</dd></div><div><dt>健康分</dt><dd><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></dd></div><div><dt>关联微信群</dt><dd>{{ hallGroupLabel(row) }}</dd></div></dl>
 					<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div><div><dt>更新时间</dt><dd>{{ row.updatedAt || '-' }}</dd></div></dl></details>
 					<div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/anchor/hall/edit'" type="primary" @click="openEdit(row)">编辑</el-button></div>
 				</template>
@@ -42,6 +43,10 @@
 
 			<pagination v-show="tableData.total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="tableData.total" @pagination="loadList" />
 		</el-card>
+		<el-dialog v-model="scoreDialogVisible" :title="`${scoreHall.hallName || ''} 分值记录`" width="900px" destroy-on-close>
+			<el-table v-loading="scoreLogs.loading" :data="scoreLogs.list" border stripe><el-table-column prop="optTime" label="操作时间" width="165"/><el-table-column prop="optUser" label="操作人" width="120"/><el-table-column prop="reasonDesc" label="原因" min-width="220"/><el-table-column prop="anchorId" label="主播ID" width="120"/><el-table-column prop="anchorName" label="主播昵称" width="140"/><el-table-column prop="scoreValue" label="分值" width="90"/></el-table>
+			<pagination v-show="scoreLogs.total>0" v-model:page="scoreLogs.pageNum" v-model:limit="scoreLogs.pageSize" :total="scoreLogs.total" @pagination="loadScoreLogs"/>
+		</el-dialog>
 
 		<el-dialog v-model="dialogVisible" :title="editing ? '编辑厅' : '新增厅'" width="680px" destroy-on-close>
 			<el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
@@ -66,6 +71,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { addAnchorHall, editAnchorHall, getAnchorHallDetail, getAnchorHallList } from '/@/api/anchor';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
+import { getFlowDataScoreLogs } from '/@/api/system/flowData';
 
 defineOptions({ name: 'anchorHall' });
 
@@ -75,6 +81,7 @@ const dialogVisible = ref(false);
 const editing = ref(false);
 const originalStatus = ref(1);
 const saving = ref(false);
+const scoreDialogVisible=ref(false);const scoreHall=reactive({hallId:0,hallName:''});const scoreLogs=reactive({list:[]as any[],total:0,pageNum:1,pageSize:20,loading:false});
 const groupOptions = ref<any[]>([]);
 const query = reactive({ hallId: '', hallName: '', wechatRobotGroupId: '', status: '' as string | number, pageNum: 1, pageSize: 10 });
 const tableData = reactive({ list: [] as any[], total: 0, loading: false });
@@ -111,6 +118,8 @@ const openEdit = (row: any) => getAnchorHallDetail(row.hallId).then((res: any) =
 	formRef.value?.clearValidate();
 	dialogVisible.value = true;
 });
+const loadScoreLogs=async()=>{scoreLogs.loading=true;try{const r:any=await getFlowDataScoreLogs({hallId:scoreHall.hallId,pageNum:scoreLogs.pageNum,pageSize:scoreLogs.pageSize});scoreLogs.list=r.data.list??[];scoreLogs.total=r.data.total??0;}finally{scoreLogs.loading=false;}};
+const openScoreLogs=(row:any)=>{Object.assign(scoreHall,{hallId:row.hallId,hallName:row.hallName});Object.assign(scoreLogs,{list:[],total:0,pageNum:1,pageSize:20});scoreDialogVisible.value=true;loadScoreLogs();};
 
 const submit = async () => {
 	const valid = await formRef.value?.validate().catch(() => false);
