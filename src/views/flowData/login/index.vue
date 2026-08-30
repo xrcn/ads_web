@@ -28,4 +28,4 @@ const loadCaptcha=async()=>{captchaLoading.value=true;try{Object.assign(captcha,
 const login=async()=>{if(!config.account||!config.password||!verifyCode.value.trim()){ElMessage.warning('请填写账号、密码和验证码');return;}loggingIn.value=true;try{Object.assign(config,(await loginVVAuth({sessionId:captcha.sessionId,account:config.account,password:config.password,verifyCode:verifyCode.value.trim()}) as any).data);Object.assign(captcha,{sessionId:'',imageDataUrl:''});verifyCode.value='';ElMessage.success('VV 登录成功');await loadStatus();}finally{loggingIn.value=false;}};
 onMounted(()=>Promise.allSettled([loadConfig(),loadStatus()]));
 </script>
-<style scoped>.captcha-row{display:flex;align-items:center;gap:12px;margin-top:16px}.captcha-row img{width:120px;height:40px;border:1px solid var(--el-border-color);cursor:pointer;object-fit:contain}.captcha-row .el-input{width:180px}</style>
+<style scoped>.vv-login-container :deep(.el-card) { min-height: 0; }.captcha-row{display:flex;align-items:center;gap:12px;margin-top:16px}.captcha-row img{width:120px;height:40px;border:1px solid var(--el-border-color);cursor:pointer;object-fit:contain}.captcha-row .el-input{width:180px}</style>

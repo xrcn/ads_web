@@ -19,6 +19,7 @@ for (const [source, needle] of [
 	[anchorApi, '/api/v1/system/anchor/vvSync'],
 	[login, 'type="password"'],
 	[login, '当前登录状态'],
+	[login, '.vv-login-container :deep(.el-card) { min-height: 0; }'],
 	[income, '同步主播收益'],
 	[daily, '厅每日流水'],
 	[daily, 'prop="rank"'],
