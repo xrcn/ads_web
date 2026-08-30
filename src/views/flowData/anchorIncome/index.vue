@@ -1,5 +1,66 @@
-<template><el-card shadow="hover"><template #header><div class="header"><span>主播收益</span><div><span class="summary">最近成功同步时间：{{summary.finishedAt||'-'}}</span><el-button type="warning" :loading="syncing" @click="runSync">同步主播收益</el-button></div></div></template><VVSyncProgress sync-type="ANCHOR_INCOME" :active="syncing" />
-	<el-form inline><el-form-item label="厅"><el-select v-model="query.hallId" clearable placeholder="全部厅"><el-option v-for="h in halls" :key="h.hallId" :label="h.hallName" :value="h.hallId"/></el-select></el-form-item><el-form-item label="主播ID"><el-input v-model="query.anchorId" clearable/></el-form-item><el-form-item label="主播昵称"><el-input v-model="query.anchorName" clearable/></el-form-item><el-form-item><el-button type="primary" @click="search">查询</el-button></el-form-item></el-form>
-	<el-table v-loading="table.loading" :data="table.list" border stripe><el-table-column prop="statDate" label="日期" width="110"/><el-table-column prop="anchorId" label="主播ID" width="120"/><el-table-column prop="anchorName" label="主播昵称" min-width="150"/><el-table-column prop="hallName" label="所属厅" width="130"/><el-table-column prop="totalFlow" label="总流水" width="110"/><el-table-column prop="anchorProfit" label="主播总收益" width="110"/><el-table-column prop="totalLiveDiamond" label="收入钻石价值" width="120"/><el-table-column prop="totalBindDiamond" label="绑定钻石价值" width="120"/><el-table-column prop="totalLuckyBagGiftFlow" label="福袋价值" width="100"/><el-table-column prop="unionProfit" label="家族收益" width="100"/><el-table-column prop="anchorOpenFlow" label="个人房流水" width="110"/><el-table-column prop="unionOpenFlow" label="公开厅流水" width="110"/><el-table-column prop="totalTimeText" label="直播总时长" width="130"/></el-table><pagination v-show="table.total>0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="table.total" @pagination="load"/></el-card></template>
-<script setup lang="ts">import{onMounted,reactive,ref}from'vue';import{ElMessage}from'element-plus';import{getAnchorHallOptions}from'/@/api/anchor';import{getAnchorIncomeList,getAnchorIncomeSummary,syncAnchorIncome}from'/@/api/system/flowData';import VVSyncProgress from'/@/components/vvSyncProgress/index.vue';defineOptions({name:'flowDataAnchorIncome'});const syncing=ref(false);const halls=ref<any[]>([]);const summary=reactive({finishedAt:''});const query=reactive({hallId:''as string|number,anchorId:'',anchorName:'',pageNum:1,pageSize:20});const table=reactive({list:[]as any[],total:0,loading:false});const load=async()=>{table.loading=true;try{const r:any=await getAnchorIncomeList(query);table.list=r.data.list??[];table.total=r.data.total??0;}finally{table.loading=false;}};const loadSummary=async()=>Object.assign(summary,(await getAnchorIncomeSummary()as any).data);const search=()=>{query.pageNum=1;load();};const runSync=async()=>{syncing.value=true;try{const r:any=await syncAnchorIncome();ElMessage.success(r.data.upToDate?'数据已是最新':`同步成功：新增 ${r.data.insertedCount}，更新 ${r.data.updatedCount}`);await Promise.all([load(),loadSummary()]);}finally{syncing.value=false;}};onMounted(async()=>{const h:any=await getAnchorHallOptions();halls.value=h.data.list??[];await Promise.allSettled([load(),loadSummary()]);});</script>
-<style scoped>.header{display:flex;justify-content:space-between;align-items:center}.summary{margin-right:16px;color:var(--el-text-color-secondary)}</style>
+<template>
+	<el-card shadow="hover">
+		<template #header><div class="header"><span class="summary">最近成功同步时间：{{ summary.finishedAt || '-' }}</span><el-button type="warning" :loading="syncing" @click="runSync">同步主播收益</el-button></div></template>
+		<VVSyncProgress sync-type="ANCHOR_INCOME" :active="syncing" />
+		<el-form class="filters" inline>
+			<el-form-item label="日期范围"><el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" /></el-form-item>
+			<el-form-item label="所属厅"><el-select v-model="query.hallId" clearable placeholder="全部厅" style="width: 220px"><el-option v-for="hall in halls" :key="hall.hallId" :label="hall.hallName" :value="hall.hallId" /></el-select></el-form-item>
+			<el-form-item label="主播ID"><el-input v-model="query.anchorId" clearable /></el-form-item>
+			<el-form-item label="主播昵称"><el-input v-model="query.anchorName" clearable /></el-form-item>
+			<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button></el-form-item>
+		</el-form>
+		<el-table v-loading="table.loading" :data="table.list" border stripe><el-table-column prop="statDate" label="日期" width="110"/><el-table-column prop="anchorId" label="主播ID" width="120"/><el-table-column prop="anchorName" label="主播昵称" min-width="150"/><el-table-column prop="hallName" label="所属厅" width="130"/><el-table-column prop="totalFlow" label="总流水" width="110"/><el-table-column prop="anchorProfit" label="主播总收益" width="110"/><el-table-column prop="totalLiveDiamond" label="收入钻石价值" width="120"/><el-table-column prop="totalBindDiamond" label="绑定钻石价值" width="120"/><el-table-column prop="totalLuckyBagGiftFlow" label="福袋价值" width="100"/><el-table-column prop="unionProfit" label="家族收益" width="100"/><el-table-column prop="anchorOpenFlow" label="个人房流水" width="110"/><el-table-column prop="unionOpenFlow" label="公开厅流水" width="110"/><el-table-column prop="totalTimeText" label="直播总时长" width="130"/></el-table>
+		<pagination v-show="table.total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="table.total" @pagination="load" />
+	</el-card>
+</template>
+
+<script setup lang="ts">
+import { onMounted, reactive, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { getAnchorHallOptions } from '/@/api/anchor';
+import { getAnchorIncomeList, getAnchorIncomeSummary, syncAnchorIncome } from '/@/api/system/flowData';
+import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
+
+defineOptions({ name: 'flowDataAnchorIncome' });
+const syncing = ref(false);
+const halls = ref<any[]>([]);
+const dateRange = ref<string[] | null>(null);
+const summary = reactive({ finishedAt: '' });
+const query = reactive({ hallId: '' as string | number, anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
+const table = reactive({ list: [] as any[], total: 0, loading: false });
+const load = async () => {
+	table.loading = true;
+	try {
+		const [startDate = '', endDate = ''] = dateRange.value ?? [];
+		const response: any = await getAnchorIncomeList({ ...query, startDate, endDate });
+		table.list = response.data.list ?? [];
+		table.total = response.data.total ?? 0;
+	} finally {
+		table.loading = false;
+	}
+};
+const loadSummary = async () => Object.assign(summary, (await getAnchorIncomeSummary() as any).data);
+const search = () => { query.pageNum = 1; void load(); };
+const resetQuery = () => { Object.assign(query, { hallId: '', anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 }); dateRange.value = null; void load(); };
+const runSync = async () => {
+	syncing.value = true;
+	try {
+		const response: any = await syncAnchorIncome();
+		ElMessage.success(response.data.upToDate ? '数据已是最新' : `同步成功：新增 ${response.data.insertedCount}，更新 ${response.data.updatedCount}`);
+		await Promise.all([load(), loadSummary()]);
+	} finally {
+		syncing.value = false;
+	}
+};
+onMounted(async () => {
+	const response: any = await getAnchorHallOptions();
+	halls.value = response.data.list ?? [];
+	await Promise.allSettled([load(), loadSummary()]);
+});
+</script>
+
+<style scoped>
+.header { display: flex; justify-content: flex-end; align-items: center; }
+.summary { margin-right: 16px; color: var(--el-text-color-secondary); }
+.filters :deep(.el-input) { width: 220px; }
+</style>

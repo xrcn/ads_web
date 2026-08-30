@@ -23,7 +23,7 @@ export interface FlowDataPageQuery {
 	endDate?: string;
 }
 
-export type VVSyncType = 'HALL_DATA' | 'ANCHOR_INCOME' | 'ANCHOR_LIST';
+export type VVSyncType = 'HALL_DATA' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_LIST';
 
 export interface VVSyncProgress {
 	batchId: number;

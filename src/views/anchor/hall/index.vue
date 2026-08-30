@@ -1,6 +1,7 @@
 <template>
 	<div class="anchor-hall-container">
 		<el-card shadow="hover">
+			<VVSyncProgress sync-type="HALL_SCORE" :active="syncingScore" />
 			<MobileRecordList :data="tableData.list" :loading="tableData.loading" row-key="hallId" filter-summary="全部厅" data-mobile-view="anchor-hall">
 				<template #filters>
 					<el-form ref="queryRef" :model="query" inline label-width="86px" class="mb15">
@@ -14,21 +15,21 @@
 						<el-form-item label="状态" prop="status">
 							<el-select v-model="query.status" clearable placeholder="全部状态"><el-option label="启用" :value="1" /><el-option label="停用" :value="0" /></el-select>
 						</el-form-item>
-						<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button v-auth="'api/v1/system/anchor/hall/add'" type="success" plain @click="openAdd">新增厅</el-button></el-form-item>
+						<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button><el-button v-auth="'api/v1/system/anchor/hall/add'" type="success" plain @click="openAdd">新增厅</el-button><el-button v-auth="'api/v1/system/anchor/hall/vvScoreSync'" type="warning" :loading="syncingScore" @click="syncHallScores">同步厅健康分</el-button></el-form-item>
 					</el-form>
 				</template>
 
 				<template #desktop>
-					<el-table v-loading="tableData.loading" :data="tableData.list" border stripe>
-						<el-table-column prop="hallId" label="厅 ID" min-width="100" />
-						<el-table-column prop="hallName" label="厅名" min-width="130" show-overflow-tooltip />
+					<el-table ref="hallTableRef" v-loading="tableData.loading" :data="tableData.list" border stripe @sort-change="handleSortChange">
+						<el-table-column prop="hallId" label="厅 ID" min-width="100" sortable="custom" />
+						<el-table-column prop="hallName" label="厅名" min-width="130" show-overflow-tooltip sortable="custom" />
 						<el-table-column prop="hallManager" label="厅管" min-width="110"><template #default="{ row }">{{ row.hallManager || '-' }}</template></el-table-column>
 						<el-table-column prop="hallAssistant" label="厅助理" min-width="110"><template #default="{ row }">{{ row.hallAssistant || '-' }}</template></el-table-column>
-						<el-table-column label="健康分" width="100" align="center"><template #default="{ row }"><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></template></el-table-column>
+						<el-table-column prop="hallScore" label="健康分" width="100" align="center" sortable="custom"><template #default="{ row }"><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></template></el-table-column>
 						<el-table-column label="关联微信群" min-width="180" show-overflow-tooltip><template #default="{ row }">{{ hallGroupLabel(row) }}</template></el-table-column>
-						<el-table-column label="状态" width="90" align="center"><template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></template></el-table-column>
+						<el-table-column prop="status" label="状态" width="90" align="center" sortable="custom"><template #default="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></template></el-table-column>
 						<el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
-						<el-table-column prop="updatedAt" label="更新时间" min-width="165" />
+						<el-table-column prop="updatedAt" label="更新时间" min-width="165" sortable="custom" />
 						<el-table-column label="操作" width="90" fixed="right"><template #default="{ row }"><el-button v-auth="'api/v1/system/anchor/hall/edit'" text type="primary" @click="openEdit(row)">编辑</el-button></template></el-table-column>
 					</el-table>
 				</template>
@@ -70,8 +71,10 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { addAnchorHall, editAnchorHall, getAnchorHallDetail, getAnchorHallList } from '/@/api/anchor';
+import { syncVVHallScores } from '/@/api/anchor';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 import { getFlowDataScoreLogs } from '/@/api/system/flowData';
+import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
 
 defineOptions({ name: 'anchorHall' });
 
@@ -81,9 +84,11 @@ const dialogVisible = ref(false);
 const editing = ref(false);
 const originalStatus = ref(1);
 const saving = ref(false);
+const syncingScore = ref(false);
+const hallTableRef = ref();
 const scoreDialogVisible=ref(false);const scoreHall=reactive({hallId:0,hallName:''});const scoreLogs=reactive({list:[]as any[],total:0,pageNum:1,pageSize:20,loading:false});
 const groupOptions = ref<any[]>([]);
-const query = reactive({ hallId: '', hallName: '', wechatRobotGroupId: '', status: '' as string | number, pageNum: 1, pageSize: 10 });
+const query = reactive({ hallId: '', hallName: '', wechatRobotGroupId: '', status: '' as string | number, sortBy: '', sortOrder: '', pageNum: 1, pageSize: 10 });
 const tableData = reactive({ list: [] as any[], total: 0, loading: false });
 const emptyForm = () => ({ hallId: undefined as number | undefined, hallName: '', hallManager: '', hallAssistant: '', wechatRobotGroupId: '' as string | number, groupName: '', groupWxid: '', status: 1, remark: '' });
 const form = reactive(emptyForm());
@@ -108,7 +113,8 @@ const loadList = () => {
 	}).finally(() => { tableData.loading = false; });
 };
 const search = () => { query.pageNum = 1; loadList(); };
-const resetQuery = () => { queryRef.value?.resetFields(); Object.assign(query, { hallId: '', hallName: '', wechatRobotGroupId: '', status: '', pageNum: 1, pageSize: 10 }); loadList(); };
+const resetQuery = () => { queryRef.value?.resetFields(); hallTableRef.value?.clearSort(); Object.assign(query, { hallId: '', hallName: '', wechatRobotGroupId: '', status: '', sortBy: '', sortOrder: '', pageNum: 1, pageSize: 10 }); loadList(); };
+const handleSortChange = ({ prop, order }: { prop: string; order: string | null }) => { Object.assign(query, { sortBy: order ? prop : '', sortOrder: order || '', pageNum: 1 }); loadList(); };
 const openAdd = () => { editing.value = false; originalStatus.value = 1; Object.assign(form, emptyForm()); formRef.value?.clearValidate(); dialogVisible.value = true; };
 const openEdit = (row: any) => getAnchorHallDetail(row.hallId).then((res: any) => {
 	editing.value = true;
@@ -120,6 +126,7 @@ const openEdit = (row: any) => getAnchorHallDetail(row.hallId).then((res: any) =
 });
 const loadScoreLogs=async()=>{scoreLogs.loading=true;try{const r:any=await getFlowDataScoreLogs({hallId:scoreHall.hallId,pageNum:scoreLogs.pageNum,pageSize:scoreLogs.pageSize});scoreLogs.list=r.data.list??[];scoreLogs.total=r.data.total??0;}finally{scoreLogs.loading=false;}};
 const openScoreLogs=(row:any)=>{Object.assign(scoreHall,{hallId:row.hallId,hallName:row.hallName});Object.assign(scoreLogs,{list:[],total:0,pageNum:1,pageSize:20});scoreDialogVisible.value=true;loadScoreLogs();};
+const syncHallScores=async()=>{await ElMessageBox.confirm('确认同步当前启用厅的健康分和分值记录？','同步确认',{type:'warning'});syncingScore.value=true;try{const r:any=await syncVVHallScores();ElMessage.success(`同步成功：厅 ${r.data.hallScoreCount}，分值记录 ${r.data.scoreLogCount}`);await loadList();}finally{syncingScore.value=false;}};
 
 const submit = async () => {
 	const valid = await formRef.value?.validate().catch(() => false);

@@ -51,6 +51,7 @@ export const getAnchorHallList = (params: object) => request({ url: '/api/v1/sys
 export const getAnchorHallDetail = (hallId: number) => request({ url: '/api/v1/system/anchor/hall/detail', method: 'get', params: { hallId } });
 export const addAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/add', method: 'post', data });
 export const editAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/edit', method: 'put', data });
+export const syncVVHallScores = () => request({ url: '/api/v1/system/anchor/hall/vvScoreSync', method: 'post', timeout: 180000 });
 export const syncVVAnchors = () => request({ url: '/api/v1/system/anchor/vvSync', method: 'post', timeout: 180000 });
 export const getVVAnchorSyncSummary = () => request({ url: '/api/v1/system/anchor/vvSyncSummary', method: 'get' });
 

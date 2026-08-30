@@ -1,5 +1,5 @@
 <template>
-	<div v-if="progress.status" class="vv-sync-progress">
+	<div v-if="visible && progress.status" class="vv-sync-progress">
 		<div class="vv-sync-progress__text">
 			<span>{{ displayText }}</span>
 			<span v-if="progress.total > 0">{{ progress.current }}/{{ progress.total }}</span>
@@ -14,11 +14,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, watch } from 'vue';
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { getVVSyncProgress, type VVSyncProgress, type VVSyncType } from '/@/api/system/flowData';
 
 const props = defineProps<{ syncType: VVSyncType; active: boolean }>();
 const progress = reactive<VVSyncProgress>({ batchId: 0, syncType: props.syncType, status: '', stage: '', current: 0, total: 0, message: '', startedAt: '', finishedAt: '' });
+const visible = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
 let loading = false;
 let pollingEnabled = true;
@@ -42,7 +43,10 @@ const loadProgress = async () => {
 		const response: any = await getVVSyncProgress(props.syncType);
 		if (!pollingEnabled) return;
 		Object.assign(progress, response.data);
-		if (progress.status === 'RUNNING') startPolling();
+		if (progress.status === 'RUNNING') {
+			visible.value = true;
+			startPolling();
+		}
 		else if (!props.active) stopPolling();
 	} catch {
 		if (!props.active && progress.status !== 'RUNNING') stopPolling();
@@ -53,15 +57,20 @@ const loadProgress = async () => {
 
 watch(() => props.active, (active) => {
 	if (!pollingEnabled) return;
-	if (active) startPolling();
+	if (active) {
+		visible.value = true;
+		startPolling();
+	}
 	void loadProgress();
 });
 const activatePolling = () => {
 	pollingEnabled = true;
+	visible.value = false;
 	void loadProgress();
 };
 const deactivatePolling = () => {
 	pollingEnabled = false;
+	visible.value = false;
 	stopPolling();
 };
 onMounted(activatePolling);
