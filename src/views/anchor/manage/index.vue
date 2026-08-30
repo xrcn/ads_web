@@ -18,6 +18,7 @@
 		</el-form>
 		</div>
 		<div class="vv-sync-summary">最近成功同步时间：{{ vvSyncSummary.finishedAt || '-' }}</div>
+		<VVSyncProgress sync-type="ANCHOR_LIST" :active="syncingVV" />
 		<div class="mb15"><el-button v-auth="'api/v1/system/anchor/profile/batchDelete'" type="danger" plain @click="batch('DELETE')">批量删除</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchIgnore'" type="warning" plain @click="batch('IGNORE')">批量忽略</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchCancelIgnore'" plain @click="batch('CANCEL_IGNORE')">取消忽略</el-button></div>
 		<AnchorList ref="anchorListRef" :query="query" :hall-options="hallOptions" :platform-options="platformOptions" />
 	</el-card></div>
@@ -28,6 +29,7 @@ import { onMounted, reactive, ref } from 'vue';
 import type { FormInstance } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import AnchorList from '/@/views/anchor/manage/component/anchorList.vue';
+import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
 import { getAnchorHallOptions, getAnchorPlatformOptions, getVVAnchorSyncSummary, syncVVAnchors } from '/@/api/anchor';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 defineOptions({ name: 'anchorManage' });

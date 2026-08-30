@@ -23,8 +23,23 @@ export interface FlowDataPageQuery {
 	endDate?: string;
 }
 
+export type VVSyncType = 'HALL_DATA' | 'ANCHOR_INCOME' | 'ANCHOR_LIST';
+
+export interface VVSyncProgress {
+	batchId: number;
+	syncType: VVSyncType;
+	status: '' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+	stage: '' | 'PREPARING' | 'FETCHING' | 'VALIDATING' | 'WRITING' | 'COMPLETED' | 'FAILED';
+	current: number;
+	total: number;
+	message: string;
+	startedAt: string;
+	finishedAt: string;
+}
+
 export const syncFlowData = () => request({ url: '/api/v1/system/flowData/sync', method: 'post', timeout: 180000 });
 export const getFlowDataSummary = () => request({ url: '/api/v1/system/flowData/summary', method: 'get' });
+export const getVVSyncProgress = (syncType: VVSyncType) => request({ url: '/api/v1/system/flowData/progress', method: 'get', params: { syncType } });
 export const getFlowDataDaily = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/daily', method: 'get', params });
 export const getFlowDataTasks = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/tasks', method: 'get', params });
 export const getFlowDataHealth = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/health', method: 'get', params });

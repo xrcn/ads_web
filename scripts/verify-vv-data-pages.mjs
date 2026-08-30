@@ -9,6 +9,7 @@ const login = read('src/views/flowData/login/index.vue');
 const income = read('src/views/flowData/anchorIncome/index.vue');
 const daily = read('src/views/flowData/daily/index.vue');
 const tasks = read('src/views/flowData/tasks/index.vue');
+const progress = read('src/components/vvSyncProgress/index.vue');
 const hall = read('src/views/anchor/hall/index.vue');
 const anchors = read('src/views/anchor/manage/index.vue');
 
@@ -16,6 +17,20 @@ for (const [source, needle] of [
 	[api, '/api/v1/system/vvAuth/status'],
 	[api, '/api/v1/system/flowData/anchorIncome/sync'],
 	[api, '/api/v1/system/flowData/anchorIncome/list'],
+	[api, '/api/v1/system/flowData/progress'],
+	[progress, 'setInterval'],
+	[progress, 'onUnmounted'],
+	[progress, 'onDeactivated'],
+	[progress, 'pollingEnabled = false'],
+	[progress, 'if (!pollingEnabled) return'],
+	[progress, 'catch {'],
+	[progress, "!props.active && progress.status !== 'RUNNING'"],
+	[progress, '{{ progress.current }}/{{ progress.total }}'],
+	[progress, '上次同步已完成'],
+	[income, 'sync-type="ANCHOR_INCOME"'],
+	[daily, 'sync-type="HALL_DATA"'],
+	[tasks, 'sync-type="HALL_DATA"'],
+	[anchors, 'sync-type="ANCHOR_LIST"'],
 	[anchorApi, '/api/v1/system/anchor/vvSync'],
 	[login, 'type="password"'],
 	[login, '当前登录状态'],
