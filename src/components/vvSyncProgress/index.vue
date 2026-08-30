@@ -17,7 +17,7 @@
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { getVVSyncProgress, type VVSyncProgress, type VVSyncType } from '/@/api/system/flowData';
 
-const props = defineProps<{ syncType: VVSyncType; active: boolean }>();
+const props = defineProps<{ syncType: VVSyncType; active: boolean; loader?: () => Promise<any> }>();
 const progress = reactive<VVSyncProgress>({ batchId: 0, syncType: props.syncType, status: '', stage: '', current: 0, total: 0, message: '', startedAt: '', finishedAt: '' });
 const visible = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -40,7 +40,7 @@ const loadProgress = async () => {
 	if (loading) return;
 	loading = true;
 	try {
-		const response: any = await getVVSyncProgress(props.syncType);
+		const response: any = props.loader ? await props.loader() : await getVVSyncProgress(props.syncType);
 		if (!pollingEnabled) return;
 		Object.assign(progress, response.data);
 		if (progress.status === 'RUNNING') {

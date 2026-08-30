@@ -23,7 +23,7 @@ export interface FlowDataPageQuery {
 	endDate?: string;
 }
 
-export type VVSyncType = 'HALL_DATA' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_LIST';
+export type VVSyncType = 'HALL_DATA' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_LIST';
 
 export interface VVSyncProgress {
 	batchId: number;
@@ -52,3 +52,8 @@ export const getVVAuthStatus = () => request({ url: '/api/v1/system/vvAuth/statu
 export const syncAnchorIncome = () => request({ url: '/api/v1/system/flowData/anchorIncome/sync', method: 'post', timeout: 180000 });
 export const getAnchorIncomeSummary = () => request({ url: '/api/v1/system/flowData/anchorIncome/summary', method: 'get' });
 export const getAnchorIncomeList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorIncome/list', method: 'get', params });
+export const syncAnchorActivity = () => request({ url: '/api/v1/system/flowData/anchorActivity/sync', method: 'post', timeout: 180000 });
+export const getAnchorActivitySummary = () => request({ url: '/api/v1/system/flowData/anchorActivity/summary', method: 'get' });
+export const getAnchorActivityList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorActivity/list', method: 'get', params });
+export const getAnchorActivityProgress = () => request({ url: '/api/v1/system/flowData/anchorActivity/progress', method: 'get' });
+export const getAnchorActivityHallOptions = () => request({ url: '/api/v1/system/flowData/anchorActivity/hallOptions', method: 'get' });
