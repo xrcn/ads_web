@@ -30,11 +30,15 @@ for (const [source, needle] of [
 	[progress, 'v-if="visible && progress.status"'],
 	[progress, "progress.status === 'RUNNING'"],
 	[progress, 'visible.value = false'],
+	[progress, 'defineEmits<{ progress: [value: VVSyncProgress] }>()'],
+	[progress, "emit('progress', { ...progress })"],
 	[income, 'sync-type="ANCHOR_INCOME"'],
 	[daily, 'sync-type="HALL_DATA"'],
 	[tasks, 'sync-type="HALL_DATA"'],
 	[anchors, 'sync-type="ANCHOR_LIST"'],
 	[anchorApi, '/api/v1/system/anchor/vvSync'],
+	[anchorApi, 'export interface AnchorVVSyncAccepted'],
+	[anchorApi, 'batchId: number'],
 	[login, 'type="password"'],
 	[login, '当前登录状态'],
 	[login, '.vv-login-container :deep(.el-card) { min-height: 0; }'],
@@ -68,9 +72,19 @@ for (const [source, needle] of [
 	[anchors, '未变化'],
 	[anchors, '未返回'],
 	[anchors, '冲突'],
+	[anchors, 'activeBatchId'],
+	[anchors, '同步任务已开始'],
+	[anchors, '@progress="handleVVProgress"'],
+	[anchors, 'progress.batchId !== activeBatchId.value'],
+	[anchors, "progress.status === 'SUCCEEDED'"],
+	[anchors, "progress.status === 'FAILED'"],
+	[anchors, 'activeBatchId.value = undefined'],
+	[anchors, 'Promise.allSettled([loadVVSummary(),loadList()])'],
+	[anchors, "summaryResult.status==='fulfilled'"],
 ]) {
 	if (!source.includes(needle)) throw new Error(`missing VV data page contract: ${needle}`);
 }
+if (/syncVVAnchors[\s\S]*?timeout:\s*180000/.test(anchorApi)) throw new Error('anchor VV sync must use the normal short request timeout');
 if (anchors.includes('当前 VV 登录状态')) throw new Error('anchor list must not expose VV login status');
 for (const [source, title] of [[income, '主播收益'], [daily, '厅每日流水'], [tasks, '厅任务流水数据']]) {
 	if (source.includes(`<span>${title}</span>`)) throw new Error(`flow data card repeats page title: ${title}`);

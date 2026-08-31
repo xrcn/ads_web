@@ -1,5 +1,9 @@
 import request from '/@/utils/request';
 
+export interface AnchorVVSyncAccepted {
+	batchId: number;
+}
+
 export function getAnchorList(params: object) {
 	return request({
 		url: '/api/v1/system/anchor/list',
@@ -52,7 +56,7 @@ export const getAnchorHallDetail = (hallId: number) => request({ url: '/api/v1/s
 export const addAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/add', method: 'post', data });
 export const editAnchorHall = (data: object) => request({ url: '/api/v1/system/anchor/hall/edit', method: 'put', data });
 export const syncVVHallScores = () => request({ url: '/api/v1/system/anchor/hall/vvScoreSync', method: 'post', timeout: 180000 });
-export const syncVVAnchors = () => request({ url: '/api/v1/system/anchor/vvSync', method: 'post', timeout: 180000 });
+export const syncVVAnchors = () => request({ url: '/api/v1/system/anchor/vvSync', method: 'post' }) as unknown as Promise<{ data: AnchorVVSyncAccepted }>;
 export const getVVAnchorSyncSummary = () => request({ url: '/api/v1/system/anchor/vvSyncSummary', method: 'get' });
 
 export const getAnchorPlatformOptions = () => request({ url: '/api/v1/system/anchor/platformOptions', method: 'get' });
