@@ -67,6 +67,7 @@ const handleVVProgress=async(progress:VVSyncProgressValue)=>{
 	if(progress.status === 'FAILED'){
 		activeBatchId.value = undefined;
 		syncingVV.value=false;
+		ElMessage.error(progress.errorMessage || '同步失败');
 	}
 };
 onMounted(async()=>{ const [h,p,groups]:any[]=await Promise.all([getAnchorHallOptions(),getAnchorPlatformOptions(),getWechatRobotGroupList({pageNum:1,pageSize:1000})]); hallOptions.value=h.data.list??[]; platformOptions.value=p.data.list??[]; groupOptions.value=groups.data.list??[];await loadVVSummary(); });

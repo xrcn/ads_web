@@ -33,6 +33,7 @@ export interface VVSyncProgress {
 	current: number;
 	total: number;
 	message: string;
+	errorMessage: string;
 	startedAt: string;
 	finishedAt: string;
 }

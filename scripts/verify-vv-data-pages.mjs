@@ -18,6 +18,7 @@ for (const [source, needle] of [
 	[api, '/api/v1/system/flowData/anchorIncome/sync'],
 	[api, '/api/v1/system/flowData/anchorIncome/list'],
 	[api, '/api/v1/system/flowData/progress'],
+	[api, 'errorMessage: string'],
 	[progress, 'setInterval'],
 	[progress, 'onUnmounted'],
 	[progress, 'onDeactivated'],
@@ -32,6 +33,8 @@ for (const [source, needle] of [
 	[progress, 'visible.value = false'],
 	[progress, 'defineEmits<{ progress: [value: VVSyncProgress] }>()'],
 	[progress, "emit('progress', { ...progress })"],
+	[progress, "errorMessage: ''"],
+	[progress, "`同步失败：${progress.errorMessage}`"],
 	[income, 'sync-type="ANCHOR_INCOME"'],
 	[daily, 'sync-type="HALL_DATA"'],
 	[tasks, 'sync-type="HALL_DATA"'],
@@ -81,6 +84,7 @@ for (const [source, needle] of [
 	[anchors, 'activeBatchId.value = undefined'],
 	[anchors, 'Promise.allSettled([loadVVSummary(),loadList()])'],
 	[anchors, "summaryResult.status==='fulfilled'"],
+	[anchors, "ElMessage.error(progress.errorMessage || '同步失败')"],
 ]) {
 	if (!source.includes(needle)) throw new Error(`missing VV data page contract: ${needle}`);
 }

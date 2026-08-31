@@ -19,7 +19,7 @@ import { getVVSyncProgress, type VVSyncProgress, type VVSyncType } from '/@/api/
 
 const props = defineProps<{ syncType: VVSyncType; active: boolean; loader?: () => Promise<any> }>();
 const emit = defineEmits<{ progress: [value: VVSyncProgress] }>();
-const progress = reactive<VVSyncProgress>({ batchId: 0, syncType: props.syncType, status: '', stage: '', current: 0, total: 0, message: '', startedAt: '', finishedAt: '' });
+const progress = reactive<VVSyncProgress>({ batchId: 0, syncType: props.syncType, status: '', stage: '', current: 0, total: 0, message: '', errorMessage: '', startedAt: '', finishedAt: '' });
 const visible = ref(false);
 let timer: ReturnType<typeof setInterval> | undefined;
 let loading = false;
@@ -28,7 +28,7 @@ let pollingEnabled = true;
 const percentage = computed(() => progress.total > 0 ? Math.min(100, Math.round(progress.current * 100 / progress.total)) : 0);
 const progressStatus = computed(() => progress.status === 'SUCCEEDED' ? 'success' : progress.status === 'FAILED' ? 'exception' : undefined);
 const stageText = computed(() => ({ PREPARING: '准备同步', FETCHING: '拉取远端数据', VALIDATING: '校验数据', WRITING: '写入数据库', COMPLETED: '同步完成', FAILED: '同步失败' } as Record<string, string>)[progress.stage] || '同步中');
-const displayText = computed(() => progress.message || (progress.status === 'SUCCEEDED' ? '上次同步已完成' : progress.status === 'FAILED' ? '上次同步失败' : stageText.value));
+const displayText = computed(() => progress.status === 'FAILED' && progress.errorMessage ? `同步失败：${progress.errorMessage}` : progress.message || (progress.status === 'SUCCEEDED' ? '上次同步已完成' : progress.status === 'FAILED' ? '上次同步失败' : stageText.value));
 
 const stopPolling = () => {
 	if (timer) clearInterval(timer);
