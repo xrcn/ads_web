@@ -23,6 +23,7 @@ for (const value of ['待审核', '已通过', '未通过', '查看主播资料'
 }
 if (!api.includes('recordKey: string') || !anchorAudit.includes('row-key="recordKey"')) throw new Error('anchor audit mobile rows require a stable recordKey');
 if (!anchorAudit.includes('续约申请(续签中)')) throw new Error('missing VV historical audit status mapping');
+if (!anchorAudit.includes('.audit-summary :deep(.el-card)') || !anchorAudit.includes('min-height: 0')) throw new Error('audit summary cards must override the global 88vh card height');
 for (const value of ['原所属厅', '申请所属厅', 'APPROVE', 'REJECT', 'vvAudit/hall/decision']) {
 	if (!hallAudit.includes(value)) throw new Error(`missing hall audit contract: ${value}`);
 }

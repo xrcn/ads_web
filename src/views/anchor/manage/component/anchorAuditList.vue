@@ -67,6 +67,7 @@ onMounted(load);
 
 <style scoped>
 .audit-summary { margin-bottom: 16px; }
+.audit-summary :deep(.el-card) { min-height: 0; }
 .summary-label { color: var(--el-text-color-secondary); }
 .summary-value { margin: 8px 0; font-size: 24px; font-weight: 600; }
 .subtext { color: var(--el-text-color-secondary); font-size: 12px; }
