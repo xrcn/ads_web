@@ -59,6 +59,17 @@ export const syncVVHallScores = () => request({ url: '/api/v1/system/anchor/hall
 export const syncVVAnchors = () => request({ url: '/api/v1/system/anchor/vvSync', method: 'post' }) as unknown as Promise<{ data: AnchorVVSyncAccepted }>;
 export const getVVAnchorSyncSummary = () => request({ url: '/api/v1/system/anchor/vvSyncSummary', method: 'get' });
 
+export type VVAuditDecision = 'APPROVE' | 'REJECT';
+export interface VVAnchorAuditSummary { waitCount: number; passCount: number; refuseCount: number }
+export interface VVAnchorAuditListItem { id: number; recordKey: string; userId: string; nickname: string; avatar: string; hallId: string; hallName: string; charmLevel: number; liveLevel: number; anchorType: number; applyTime: string; updaterName: string; status: number; sex: number; age: number }
+export interface VVAnchorAuditDetail { userId: string; nickname: string; avatar: string; realName: string; idCardNo: string; phone: string; qq: string; sex: number; age: number }
+export interface VVHallAuditListItem { id: number; userId: string; nickname: string; oldHallId: string; oldHallName: string; newHallId: string; newHallName: string; applyTime: string; status: number }
+export const getVVAnchorAuditList = (params: object) => request({ url: '/api/v1/system/anchor/vvAudit/anchor/list', method: 'get', params, __skipGlobalErrorMessage: true } as any);
+export const getVVAnchorAuditDetail = (targetUserId: string) => request({ url: '/api/v1/system/anchor/vvAudit/anchor/detail', method: 'get', params: { targetUserId } });
+export const decideVVAnchorAudit = (data: { targetUserId: string; decision: VVAuditDecision }) => request({ url: '/api/v1/system/anchor/vvAudit/anchor/decision', method: 'post', data });
+export const getVVHallAuditList = (params: object) => request({ url: '/api/v1/system/anchor/vvAudit/hall/list', method: 'get', params, __skipGlobalErrorMessage: true } as any);
+export const decideVVHallAudit = (data: { auditId: number; targetUserId: string; decision: VVAuditDecision }) => request({ url: '/api/v1/system/anchor/vvAudit/hall/decision', method: 'post', data });
+
 export const getAnchorPlatformOptions = () => request({ url: '/api/v1/system/anchor/platformOptions', method: 'get' });
 export const getAnchorProfileDetail = (profileId: number) => request({ url: '/api/v1/system/anchor/profile/detail', method: 'get', params: { profileId } });
 export const editAnchorProfile = (data: object) => request({ url: '/api/v1/system/anchor/profile/edit', method: 'put', data });

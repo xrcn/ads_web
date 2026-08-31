@@ -1,4 +1,6 @@
 <template>
+	<el-tabs v-model="activeTab">
+	<el-tab-pane label="主播列表" name="anchorList">
 	<div class="anchor-manage-container"><el-card shadow="hover">
 		<el-button class="mobile-record-list__filter-toggle" @click="mobileFilterOpen = !mobileFilterOpen"><el-icon><ele-Filter /></el-icon><span>筛选条件</span><el-icon><ele-ArrowDown v-if="!mobileFilterOpen" /><ele-ArrowUp v-else /></el-icon></el-button>
 		<div :class="['mobile-record-list__filter-content', { 'is-open': mobileFilterOpen }]">
@@ -22,6 +24,10 @@
 		<div class="mb15"><el-button v-auth="'api/v1/system/anchor/profile/batchDelete'" type="danger" plain @click="batch('DELETE')">批量删除</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchIgnore'" type="warning" plain @click="batch('IGNORE')">批量忽略</el-button><el-button v-auth="'api/v1/system/anchor/profile/batchCancelIgnore'" plain @click="batch('CANCEL_IGNORE')">取消忽略</el-button></div>
 		<AnchorList ref="anchorListRef" :query="query" :hall-options="hallOptions" :platform-options="platformOptions" />
 	</el-card></div>
+	</el-tab-pane>
+	<el-tab-pane label="主播审核" name="anchorAudit" lazy><AnchorAuditList /></el-tab-pane>
+	<el-tab-pane label="主播所属厅审核" name="hallAudit" lazy><HallAuditList /></el-tab-pane>
+	</el-tabs>
 </template>
 
 <script setup lang="ts">
@@ -29,11 +35,14 @@ import { onMounted, reactive, ref } from 'vue';
 import type { FormInstance } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import AnchorList from '/@/views/anchor/manage/component/anchorList.vue';
+import AnchorAuditList from '/@/views/anchor/manage/component/anchorAuditList.vue';
+import HallAuditList from '/@/views/anchor/manage/component/hallAuditList.vue';
 import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
 import { getAnchorHallOptions, getAnchorPlatformOptions, getVVAnchorSyncSummary, syncVVAnchors } from '/@/api/anchor';
 import type { VVSyncProgress as VVSyncProgressValue } from '/@/api/system/flowData';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
 defineOptions({ name: 'anchorManage' });
+const activeTab=ref('anchorList');
 const queryRef=ref<FormInstance>(); const anchorListRef=ref(); const hallOptions=ref<any[]>([]); const platformOptions=ref<any[]>([]); const groupOptions=ref<any[]>([]); const mobileFilterOpen=ref(false);
 const syncingVV=ref(false); const activeBatchId=ref<number>(); const vvSyncSummary=reactive({finishedAt:'',insertedCount:0,updatedCount:0,unchangedCount:0,missingCount:0,conflictCount:0});
 const defaults={anchorId:'',nickname:'',mobile:'',hallId:'',platformCode:'',groupId:'',bindingStatus:'',presenceStatus:'',completeness:'',recordState:'ACTIVE',status:'',vvCurrentLiveStatus:'',vvForbidStatus:''}; const query=reactive({...defaults});
