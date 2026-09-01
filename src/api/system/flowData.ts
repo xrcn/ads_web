@@ -23,6 +23,12 @@ export interface FlowDataPageQuery {
 	endDate?: string;
 }
 
+export interface AnchorIncomeSyncInput {
+	mode?: 'BACKFILL_PREVIEW' | 'BACKFILL_APPLY';
+	startDate?: string;
+	endDate?: string;
+}
+
 export type VVSyncType = 'HALL_DATA' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_LIST';
 
 export interface VVSyncProgress {
@@ -115,7 +121,7 @@ export const saveVVAuthConfig = (data: FlowDataConfig) => request({ url: '/api/v
 export const getVVAuthCaptcha = () => request({ url: '/api/v1/system/vvAuth/captcha', method: 'get' });
 export const loginVVAuth = (data: FlowDataLoginInput) => request({ url: '/api/v1/system/vvAuth/login', method: 'post', data });
 export const getVVAuthStatus = () => request({ url: '/api/v1/system/vvAuth/status', method: 'get' });
-export const syncAnchorIncome = () => request({ url: '/api/v1/system/flowData/anchorIncome/sync', method: 'post', timeout: 180000 });
+export const syncAnchorIncome = (data: AnchorIncomeSyncInput = {}) => request({ url: '/api/v1/system/flowData/anchorIncome/sync', method: 'post', data, timeout: 180000 });
 export const getAnchorIncomeSummary = () => request({ url: '/api/v1/system/flowData/anchorIncome/summary', method: 'get' });
 export const getAnchorIncomeList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorIncome/list', method: 'get', params });
 export const syncAnchorActivity = () => request({ url: '/api/v1/system/flowData/anchorActivity/sync', method: 'post', timeout: 180000 });

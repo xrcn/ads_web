@@ -1,7 +1,7 @@
 <template>
 	<el-card shadow="hover">
-		<template #header><div class="header"><span class="summary">最近成功同步时间：{{ summary.finishedAt || '-' }}</span><el-button type="warning" :loading="syncing" @click="runSync">同步主播收益</el-button></div></template>
-		<VVSyncProgress sync-type="ANCHOR_INCOME" :active="syncing" />
+		<template #header><div class="header"><span class="summary">最近成功同步时间：{{ summary.finishedAt || '-' }}</span><el-button :loading="backfilling" :disabled="operationBusy" @click="runBackfill">回补所选日期</el-button><el-button type="warning" :loading="syncing" :disabled="operationBusy" @click="runSync">同步主播收益</el-button></div></template>
+		<VVSyncProgress sync-type="ANCHOR_INCOME" :active="syncing || applyingBackfill" />
 		<el-form class="filters" inline>
 			<el-form-item label="日期范围"><el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" /></el-form-item>
 			<el-form-item label="所属厅"><el-select v-model="query.hallId" clearable placeholder="全部厅" style="width: 220px"><el-option v-for="hall in halls" :key="hall.hallId" :label="hall.hallName" :value="hall.hallId" /></el-select></el-form-item>
@@ -15,14 +15,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { getAnchorHallOptions } from '/@/api/anchor';
 import { getAnchorIncomeList, getAnchorIncomeSummary, syncAnchorIncome } from '/@/api/system/flowData';
 import VVSyncProgress from '/@/components/vvSyncProgress/index.vue';
 
 defineOptions({ name: 'flowDataAnchorIncome' });
 const syncing = ref(false);
+const backfilling = ref(false);
+const applyingBackfill = ref(false);
+const operationBusy = computed(() => syncing.value || backfilling.value);
 const halls = ref<any[]>([]);
 const dateRange = ref<string[] | null>(null);
 const summary = reactive({ finishedAt: '' });
@@ -50,6 +53,50 @@ const runSync = async () => {
 		await Promise.all([load(), loadSummary()]);
 	} finally {
 		syncing.value = false;
+	}
+};
+const shanghaiDate = (date: Date) => {
+	const values = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date).map((item) => [item.type, item.value]));
+	return `${values.year}-${values.month}-${values.day}`;
+};
+const validateBackfillRange = () => {
+	const [startDate = '', endDate = ''] = dateRange.value ?? [];
+	if (!startDate || !endDate) throw new Error('请选择回补日期范围');
+	const start = new Date(`${startDate}T00:00:00`);
+	const end = new Date(`${endDate}T00:00:00`);
+	if (start.getTime() > end.getTime()) throw new Error('开始日期不能晚于结束日期');
+	const dayCount = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+	if (dayCount > 31) throw new Error('回补日期范围不能超过31天');
+	const shanghaiNow = new Date(Date.now() - 86400000);
+	if (endDate > shanghaiDate(shanghaiNow)) throw new Error('结束日期不能晚于昨天');
+	return { startDate, endDate };
+};
+const runBackfill = async () => {
+	let range: { startDate: string; endDate: string };
+	try {
+		range = validateBackfillRange();
+	} catch (error) {
+		ElMessage.warning(error instanceof Error ? error.message : '回补日期范围无效');
+		return;
+	}
+	backfilling.value = true;
+	try {
+		const preview: any = await syncAnchorIncome({ mode: 'BACKFILL_PREVIEW', ...range });
+		const data = preview.data;
+		if ((data.missingCount ?? 0) === 0) {
+			ElMessage.info('所选日期没有缺失数据');
+			return;
+		}
+		await ElMessageBox.confirm(`预览批次 ${data.batchId}：上游 ${data.fetchedCount}，白名单命中 ${data.eligibleCount}，本地已存在 ${data.existingCount}，待回补 ${data.missingCount}，跳过 ${data.skippedCount}。确认只插入缺失记录？`, '确认回补主播收益', { type: 'warning' });
+		applyingBackfill.value = true;
+		const applied: any = await syncAnchorIncome({ mode: 'BACKFILL_APPLY', ...range });
+		ElMessage.success(`回补成功：批次 ${applied.data.batchId}，新增 ${applied.data.insertedCount}`);
+		await Promise.all([load(), loadSummary()]);
+	} catch (error) {
+		if (error !== 'cancel' && error !== 'close') throw error;
+	} finally {
+		applyingBackfill.value = false;
+		backfilling.value = false;
 	}
 };
 onMounted(async () => {
