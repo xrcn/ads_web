@@ -390,7 +390,7 @@ const syncMembers = (row: any) => {
 	syncWechatRobotGroupMembers(row.id)
 		.then((res: any) => {
 			const result = res.data || {};
-			panel.result = `收集成功：当前 ${result.memberCount ?? 0} 人，新增 ${result.added ?? 0}，更新 ${result.updated ?? 0}，恢复 ${result.restored ?? 0}，离群 ${result.left ?? 0}，已忽略 ${result.ignored ?? 0}`;
+			panel.result = `收集成功：当前 ${result.memberCount ?? 0} 人，本群成员昵称已更新`;
 			panel.loaded = false;
 			loadMembers(row, true);
 		})
