@@ -112,7 +112,7 @@ const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', comman
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
 const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序' }[value] || '-');
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
-const authoritySourceLabel = (value: string) => ({ OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
+const authoritySourceLabel = (value: string) => ({ GLOBAL_OPERATOR: '全局运维', OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
 const formatJson = (value: unknown) => {
 	if (value === null || value === undefined || value === '') return '-';
 	try {

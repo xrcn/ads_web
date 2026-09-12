@@ -7,6 +7,7 @@ const api = read('src/api/wechatGlobalOperator/index.ts');
 const page = read('src/views/wechat/globalOperator/index.vue');
 const monitorApi = read('src/api/wechatMonitor/index.ts');
 const monitorPage = read('src/views/wechat/monitor/index.vue');
+const messagePage = read('src/views/wechat/message/index.vue');
 
 const requireText = (source, text, file) => {
 	if (!source.includes(text)) throw new Error(`${file} missing ${text}`);
@@ -24,6 +25,7 @@ requireText(monitorPage, 'wechatMonitor/callbackRefresh', 'monitor page');
 for (const field of ['callbackCredentials', 'verifiedAt', 'lastError', 'PENDING', 'ACTIVE', 'RETIRING', 'NOT_STARTED']) {
 	requireText(monitorPage, field, 'monitor page');
 }
+requireText(messagePage, "GLOBAL_OPERATOR: '全局运维'", 'message page');
 for (const [name, source] of [['global operator api', api], ['global operator page', page], ['monitor page', monitorPage]]) {
 	for (const forbidden of ['secretCiphertext', 'secretHash', 'callbackUrl']) {
 		if (source.includes(forbidden)) throw new Error(`${name} leaks forbidden field ${forbidden}`);
