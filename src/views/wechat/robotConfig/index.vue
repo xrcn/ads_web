@@ -13,7 +13,7 @@
 			<el-skeleton v-if="loading && !overview" :rows="6" animated />
 
 			<template v-else-if="overview">
-				<div class="mobile-record-card__fields robot-config-mobile-summary"><div><dt>绑定机器人</dt><dd>{{ overview.robotName || '-' }}</dd></div><div><dt>群状态</dt><dd>{{ overview.groupStatus === 1 ? '启用' : '停用' }}</dd></div><div><dt>机器人状态</dt><dd>{{ robotAvailable ? '在线' : '不可用' }}</dd></div></div>
+				<div class="mobile-record-card__fields robot-config-mobile-summary"><div><dt>绑定机器人</dt><dd>{{ overview.robotName || '-' }}</dd></div><div><dt>群状态</dt><dd>{{ overview.groupStatus === 1 ? '启用' : '停用' }}</dd></div><div><dt>机器人状态</dt><dd>{{ robotAvailable ? '在线' : '不可用' }}</dd></div><div><dt>服务期</dt><dd>{{ servicePeriodText(overview) }}</dd></div></div>
 				<el-descriptions :column="tabPosition === 'top' ? 1 : 4" border class="mb15 overview-status">
 					<el-descriptions-item label="绑定机器人">{{ overview.robotName || '-' }}</el-descriptions-item>
 					<el-descriptions-item label="群状态">
@@ -24,6 +24,9 @@
 					</el-descriptions-item>
 					<el-descriptions-item label="固定档">
 						<el-tag :type="overview.fixedScheduleEnabled === 1 ? 'success' : 'info'">{{ overview.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</el-tag>
+					</el-descriptions-item>
+					<el-descriptions-item label="服务期">
+						<el-tag :type="servicePeriodTagType(overview)">{{ servicePeriodText(overview) }}</el-tag>
 					</el-descriptions-item>
 				</el-descriptions>
 
@@ -39,6 +42,9 @@
 								<el-descriptions-item label="厅号">{{ overview.hallNo || '未设置' }}</el-descriptions-item>
 								<el-descriptions-item label="群备注">{{ overview.remark || '-' }}</el-descriptions-item>
 								<el-descriptions-item label="运行状态">{{ overview.runningStatus === 1 ? '运行中' : '已停止' }}</el-descriptions-item>
+								<el-descriptions-item label="服务期开始">{{ overview.serviceStartedAt || '未设置' }}</el-descriptions-item>
+								<el-descriptions-item label="服务期结束">{{ overview.serviceExpiresAt || '未设置' }}</el-descriptions-item>
+								<el-descriptions-item label="服务期剩余">{{ servicePeriodValue(overview) }}</el-descriptions-item>
 								<el-descriptions-item label="账号健康状态">{{ overview.healthStatus || 'UNKNOWN' }}</el-descriptions-item>
 								<el-descriptions-item label="最近成员同步">{{ overview.lastSuccessfulMemberSyncAt || '-' }}</el-descriptions-item>
 								<el-descriptions-item label="Callback">
@@ -138,6 +144,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand } from '/@/api/wechatRobotGroup';
 import { auth } from '/@/utils/authFunction';
+import { servicePeriodTagType, servicePeriodText, servicePeriodValue } from '/@/utils/wechatServicePeriod';
 
 defineOptions({ name: 'wechatRobotConfig' });
 

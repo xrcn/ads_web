@@ -72,6 +72,7 @@
 					</template>
 				</el-table-column>
 				<el-table-column label="排档" width="100"><template #default="{row}"><el-tag :type="row.runningStatus===1?'success':'info'">{{row.runningStatus===1?'运行中':'未启动'}}</el-tag></template></el-table-column>
+				<el-table-column label="服务期" min-width="190" align="center"><template #default="{row}"><el-tooltip :content="servicePeriodTooltip(row)"><el-tag :type="servicePeriodTagType(row)">{{ servicePeriodText(row) }}</el-tag></el-tooltip></template></el-table-column>
 				<el-table-column v-if="canReadFixedSchedule" label="固定档" width="150" align="center">
 					<template #default="{ row }">
 						<el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" />
@@ -104,6 +105,7 @@
 				<dl class="mobile-record-card__fields">
 					<div><dt>绑定机器人</dt><dd>{{ row.robotName || '-' }}</dd></div>
 					<div><dt>排档状态</dt><dd>{{ row.runningStatus === 1 ? '运行中' : '未启动' }}</dd></div>
+					<div><dt>服务期</dt><dd>{{ servicePeriodText(row) }}</dd></div>
 					<div v-if="canReadFixedSchedule"><dt>固定档</dt><dd>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</dd></div>
 				</dl>
 				<details class="mobile-record-card__details">
@@ -262,6 +264,7 @@ import {
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
 import { getAnchorHallOptions,getAnchorPlatformOptions } from '/@/api/anchor';
 import { auth } from '/@/utils/authFunction';
+import { servicePeriodTagType, servicePeriodText, servicePeriodTooltip } from '/@/utils/wechatServicePeriod';
 
 defineOptions({ name: 'wechatRobotGroup' });
 
