@@ -9,3 +9,5 @@ export const testWechatMonitorAlert = () => request({ url: '/api/v1/system/wecha
 export const getWechatMonitorEvents = (params: object) => request({ url: '/api/v1/system/wechatMonitor/eventList', method: 'get', params });
 
 export const checkWechatMonitorsNow = () => request({ url: '/api/v1/system/wechatMonitor/checkNow', method: 'post' });
+
+export const refreshWechatMonitorCallback = (robotAccountId: number) => request({ url: '/api/v1/system/wechatMonitor/callbackRefresh', method: 'post', data: { robotAccountId } });

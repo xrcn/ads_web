@@ -82,9 +82,12 @@
 				<el-table-column label="最后检查" min-width="170"><template #default="{ row }">{{ formatTime(row.lastCheckedAt) }}</template></el-table-column>
 				<el-table-column label="最后重连" min-width="170"><template #default="{ row }">{{ formatTime(row.lastReconnectAt) }}</template></el-table-column>
 				<el-table-column label="Callback 配置时间" min-width="180"><template #default="{ row }">{{ formatTime(row.callbackConfiguredAt) }}</template></el-table-column>
+				<el-table-column label="Callback 迁移" min-width="130"><template #default="{ row }"><el-tag :type="callbackTagType(credentialFor(row.id).status)">{{ callbackStatusLabel(credentialFor(row.id).status) }}</el-tag></template></el-table-column>
+				<el-table-column label="验证时间" min-width="170"><template #default="{ row }">{{ formatTime(credentialFor(row.id).verifiedAt) }}</template></el-table-column>
 				<el-table-column prop="callbackError" label="Callback 错误" min-width="200" show-overflow-tooltip>
-					<template #default="{ row }">{{ row.callbackError || '-' }}</template>
+					<template #default="{ row }">{{ credentialFor(row.id).lastError || row.callbackError || '-' }}</template>
 				</el-table-column>
+				<el-table-column label="Callback 操作" width="110" fixed="right"><template #default="{ row }"><el-button v-auth="'api/v1/system/wechatMonitor/callbackRefresh'" text type="primary" :loading="Boolean(callbackRefreshLoading[row.id])" @click="handleCallbackRefresh(row)">重试/轮换</el-button></template></el-table-column>
 			</el-table></template><template #default="{ row }"><div class="mobile-record-card__header"><h3 class="mobile-record-card__title">{{ row.robotName }}</h3><el-tag :type="healthTagType(row.healthStatus)">{{ healthLabel(row.healthStatus) }}</el-tag></div><dl class="mobile-record-card__fields"><div><dt>微信号</dt><dd>{{ row.wechatNo || '-' }}</dd></div><div><dt>连续失败</dt><dd>{{ row.consecutiveFailures }}</dd></div><div><dt>最后检查</dt><dd>{{ formatTime(row.lastCheckedAt) }}</dd></div><div><dt>Callback</dt><dd>{{ formatTime(row.callbackConfiguredAt) }}</dd></div></dl><details class="mobile-record-card__details"><summary>查看完整状态</summary><dl class="mobile-record-card__fields"><div><dt>离线时长</dt><dd>{{ formatDuration(row.offlineSince) }}</dd></div><div><dt>最后重连</dt><dd>{{ formatTime(row.lastReconnectAt) }}</dd></div><div><dt>Callback 错误</dt><dd>{{ row.callbackError || '-' }}</dd></div></dl></details></template></MobileRecordList>
 		</el-card>
 
@@ -136,7 +139,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
-import { checkWechatMonitorsNow, getWechatMonitorEvents, getWechatMonitorOverview, saveWechatMonitorConfig, testWechatMonitorAlert } from '/@/api/wechatMonitor';
+import { checkWechatMonitorsNow, getWechatMonitorEvents, getWechatMonitorOverview, refreshWechatMonitorCallback, saveWechatMonitorConfig, testWechatMonitorAlert } from '/@/api/wechatMonitor';
 
 defineOptions({ name: 'wechatMonitor' });
 
@@ -149,11 +152,12 @@ const saving = ref(false);
 const configReady = ref(false);
 const checking = ref(false);
 const testingAlert = ref(false);
+const callbackRefreshLoading = reactive<Record<number, boolean>>({});
 const accountOptions = ref<SelectOption[]>([]);
 const groupOptions = ref<GroupOption[]>([]);
 const eventList = ref<any[]>([]);
 const eventTotal = ref(0);
-const overview = reactive({ accountCount: 0, onlineCount: 0, offlineCount: 0, unknownCount: 0, openEventCount: 0, accounts: [] as any[] });
+const overview = reactive({ accountCount: 0, onlineCount: 0, offlineCount: 0, unknownCount: 0, openEventCount: 0, accounts: [] as any[], callbackCredentials: [] as any[] });
 
 const createConfig = (config: any = {}) => ({
 	enabled: config.enabled ?? 0,
@@ -308,6 +312,21 @@ const handleTestAlert = () => {
 		.finally(() => {
 			if (isMounted) testingAlert.value = false;
 		});
+};
+
+const credentialFor = (accountId: number) => overview.callbackCredentials.find((item: any) => Number(item.robotAccountId) === Number(accountId)) ?? { status: 'NOT_STARTED', verifiedAt: '', lastError: '' };
+const callbackStatusLabel = (status: string) => ({ PENDING: '待验证', ACTIVE: '已验证', RETIRING: '宽限中', NOT_STARTED: '未开始' }[status] ?? status);
+const callbackTagType = (status: string) => ({ ACTIVE: 'success', PENDING: 'warning', RETIRING: 'info', NOT_STARTED: 'info' }[status] ?? 'danger');
+const handleCallbackRefresh = async (row: any) => {
+	callbackRefreshLoading[row.id] = true;
+	try {
+		await refreshWechatMonitorCallback(Number(row.id));
+		ElMessage.success('Callback 已登记，等待新地址验证');
+		await loadOverview();
+	} catch {
+	} finally {
+		callbackRefreshLoading[row.id] = false;
+	}
 };
 
 const resetEventQuery = () => {
