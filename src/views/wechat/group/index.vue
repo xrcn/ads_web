@@ -1,7 +1,7 @@
 <template>
 	<div class="wechat-robot-group-container">
 		<el-card shadow="hover">
-			<MobileRecordList :data="list" :loading="loading" row-key="id" filter-summary="全部机器人 · 全部状态" data-mobile-view="wechat-group">
+			<MobileRecordList :data="list" :loading="loading" row-key="id" filter-summary="默认仅显示启用群 · 可筛选已归档" data-mobile-view="wechat-group">
 			<template #filters>
 			<el-form :model="query" inline label-width="92px" class="mb15">
 				<el-form-item label="微信群名称">
@@ -18,7 +18,7 @@
 				<el-form-item label="状态">
 					<el-select v-model="query.status" placeholder="全部" clearable style="width: 220px">
 						<el-option label="启用" :value="1" />
-						<el-option label="停用" :value="0" />
+						<el-option label="已归档" :value="0" />
 					</el-select>
 				</el-form-item>
 				<el-form-item>
@@ -68,7 +68,7 @@
 				<el-table-column prop="appId" label="机器人appId" min-width="170" show-overflow-tooltip />
 				<el-table-column label="状态" width="100" align="center">
 					<template #default="{ row }">
-						<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
+						<el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '已归档' }}</el-tag>
 					</template>
 				</el-table-column>
 				<el-table-column label="排档" width="100"><template #default="{row}"><el-tag :type="row.runningStatus===1?'success':'info'">{{row.runningStatus===1?'运行中':'未启动'}}</el-tag></template></el-table-column>
@@ -85,9 +85,9 @@
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/edit'" text type="primary" @click="openEdit(row)">编辑</el-button>
 						<el-button v-auth-all="['api/v1/system/wechatRobotGroup/adminList', 'api/v1/system/wechatRobotGroup/queuePolicy']" text type="primary" @click="openPolicy(row)">管理员与排麦策略</el-button>
 						<el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text type="primary" @click="handleToggleStatus(row)">
-							{{ row.status === 1 ? '停用' : '启用' }}
+							{{ row.status === 1 ? '归档' : '恢复' }}
 						</el-button>
-						<el-button v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus===1?'danger':'success'" @click="toggleRunning(row)">{{row.runningStatus===1?'停止排档':'启动排档'}}</el-button>
+						<el-button v-if="row.status === 1" v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus===1?'danger':'success'" @click="toggleRunning(row)">{{row.runningStatus===1?'停止排档':'启动排档'}}</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -99,7 +99,7 @@
 						<h3 class="mobile-record-card__title">{{ row.groupName }}</h3>
 						<p class="mobile-record-card__subtitle">厅号 {{ row.hallNo || '-' }}</p>
 					</div>
-					<el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
+					<el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '已归档' }}</el-tag>
 				</div>
 				<dl class="mobile-record-card__fields">
 					<div><dt>绑定机器人</dt><dd>{{ row.robotName || '-' }}</dd></div>
@@ -150,8 +150,8 @@
 						<template #dropdown>
 							<el-dropdown-menu>
 								<el-dropdown-item><el-button v-auth-all="['api/v1/system/wechatRobotGroup/adminList', 'api/v1/system/wechatRobotGroup/queuePolicy']" text @click="openPolicy(row)">管理员与排麦策略</el-button></el-dropdown-item>
-								<el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text @click="handleToggleStatus(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button></el-dropdown-item>
-								<el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus === 1 ? 'danger' : 'success'" @click="toggleRunning(row)">{{ row.runningStatus === 1 ? '停止排档' : '启动排档' }}</el-button></el-dropdown-item>
+								<el-dropdown-item><el-button v-auth="'api/v1/system/wechatRobotGroup/status'" text @click="handleToggleStatus(row)">{{ row.status === 1 ? '归档' : '恢复' }}</el-button></el-dropdown-item>
+								<el-dropdown-item v-if="row.status === 1"><el-button v-auth="'api/v1/system/wechatRobotGroup/runningStatus'" text :type="row.runningStatus === 1 ? 'danger' : 'success'" @click="toggleRunning(row)">{{ row.runningStatus === 1 ? '停止排档' : '启动排档' }}</el-button></el-dropdown-item>
 							</el-dropdown-menu>
 						</template>
 					</el-dropdown>
@@ -190,10 +190,10 @@
 					<el-col :span="12"><el-form-item label="默认平台"><el-select v-model="form.defaultPlatformCode" clearable class="w100"><el-option v-for="p in platformOptions" :key="p.code" :label="p.name" :value="p.code"/></el-select></el-form-item></el-col>
 					<el-col :span="12"><el-form-item label="默认厅"><el-select v-model="form.defaultHallId" clearable class="w100"><el-option v-for="h in formHallOptions" :key="h.hallId" :label="h.hallName" :value="h.hallId" :disabled="h.disabled"/></el-select></el-form-item></el-col>
 					<el-col :span="12">
-						<el-form-item label="状态" prop="status">
+						<el-form-item v-if="!form.id" label="初始状态" prop="status">
 							<el-select v-model="form.status" placeholder="请选择状态" class="w100">
 								<el-option label="启用" :value="1" />
-								<el-option label="停用" :value="0" />
+								<el-option label="已归档" :value="0" />
 							</el-select>
 						</el-form-item>
 					</el-col>
@@ -293,7 +293,7 @@ const query = reactive({
 	groupName: '',
 	groupWxid: '',
 	wechatRobotAccountId: '' as string | number,
-	status: '' as string | number,
+	status: 1 as string | number,
 	pageNum: 1,
 	pageSize: 10,
 });
@@ -428,7 +428,7 @@ const resetQuery = () => {
 	query.groupName = '';
 	query.groupWxid = '';
 	query.wechatRobotAccountId = '';
-	query.status = '';
+	query.status = 1;
 	query.pageNum = 1;
 	query.pageSize = 10;
 	loadList();
@@ -539,11 +539,14 @@ const submitForm = () => {
 
 const handleToggleStatus = (row: any) => {
 	const nextStatus = row.status === 1 ? 0 : 1;
-	const text = nextStatus === 1 ? '启用' : '停用';
-	ElMessageBox.confirm(`确认要${text}微信群“${row.groupName}”吗？`, '提示', { type: 'warning' })
+	const action = nextStatus === 1 ? '恢复' : '归档';
+	const message = nextStatus === 1
+		? `恢复微信群“${row.groupName}”后仍保持未启动，需要手动启动排档。确认恢复吗？`
+		: `归档微信群“${row.groupName}”后将立即停止排档并从默认列表隐藏，历史数据保留且可恢复。确认归档吗？`;
+	ElMessageBox.confirm(message, `${action}微信群`, { type: 'warning' })
 		.then(() => changeWechatRobotGroupStatus(row.id, nextStatus))
 		.then(() => {
-			ElMessage.success(text + '成功');
+			ElMessage.success(action + '成功');
 			loadList();
 		})
 		.catch(() => {});
