@@ -115,7 +115,6 @@ export type RoomRankView = 'CURRENT' | 'PREVIOUS';
 
 export interface RoomRankItem {
 	rank: number;
-	userId: string;
 	userName: string;
 	score: string;
 }
@@ -123,7 +122,6 @@ export interface RoomRankItem {
 export interface RoomRankRow {
 	hallId: number;
 	hallName: string;
-	roomId: string;
 	periodKey: string;
 	totalRank: string;
 	capturedAt: string;

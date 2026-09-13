@@ -15,16 +15,17 @@
 				</div>
 				<div class="actions">
 					<span class="refresh-label">智能刷新</span>
-					<div class="help-wrap" @mouseenter="helpOpen = true" @mouseleave="helpOpen = false">
+					<div class="help-wrap" @mouseenter="helpHovered = true" @mouseleave="helpHovered = false">
 						<button
 							type="button"
 							class="help-button"
 							:aria-expanded="helpOpen"
 							aria-controls="room-rank-help"
 							aria-label="查看数据获取方式"
-							@click="helpOpen = !helpOpen"
-							@focus="helpOpen = true"
-							@blur="helpOpen = false"
+							@click="helpPinned = !helpPinned"
+							@focus="helpFocused = true"
+							@blur="helpFocused = false"
+							@keydown.esc="helpPinned = false"
 						>!</button>
 						<div v-show="helpOpen" id="room-rank-help" class="help-popover" role="tooltip">
 							<strong>数据获取方式</strong>
@@ -39,7 +40,7 @@
 						</div>
 					</div>
 					<el-button @click="toggleView">{{ view === 'CURRENT' ? '查看上次截榜' : '返回当前榜' }}</el-button>
-					<el-button type="primary" :loading="refreshing" :disabled="refreshDisabled" @click="runRefresh">立即刷新</el-button>
+					<el-button v-if="canRefresh" type="primary" :loading="refreshing" :disabled="refreshDisabled" @click="runRefresh">立即刷新</el-button>
 				</div>
 			</div>
 		</template>
@@ -94,7 +95,7 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { getAnchorHallOptions } from '/@/api/anchor';
+import { auth } from '/@/utils/authFunction';
 import {
 	getRoomRanks,
 	refreshRoomRanks,
@@ -112,11 +113,12 @@ const kind = ref<RoomRankKind>('HEART');
 const period = ref<RoomRankPeriod>('DAY');
 const view = ref<RoomRankView>('CURRENT');
 const hallId = ref<number | string>('');
-const halls = ref<Array<{ hallId: number; hallName: string }>>([]);
-const rows = ref<RoomRankRow[]>([]);
+const allRows = ref<RoomRankRow[]>([]);
 const loading = ref(false);
 const refreshing = ref(false);
-const helpOpen = ref(false);
+const helpHovered = ref(false);
+const helpFocused = ref(false);
+const helpPinned = ref(false);
 const errorMessage = ref('');
 const collectionStatus = ref<RoomRankCollectionStatus>({
 	status: 'IDLE',
@@ -129,7 +131,9 @@ const collectionStatus = ref<RoomRankCollectionStatus>({
 	errorMessage: '',
 });
 let requestVersion = 0;
+let refreshPollVersion = 0;
 let refreshTimer: number | undefined;
+let pageActive = true;
 
 const rankColumns = [
 	{ value: 1, label: '第一名' },
@@ -146,6 +150,10 @@ const rankColumns = [
 
 const kindLabel = computed(() => kind.value === 'WEALTH' ? '豪客榜' : '心动榜');
 const periodLabel = computed(() => ({ DAY: '日榜', WEEK: '周榜', MONTH: '月榜' })[period.value]);
+const canRefresh = auth('api/v1/system/flowData/roomRanks/refresh');
+const helpOpen = computed(() => helpPinned.value || helpHovered.value || helpFocused.value);
+const halls = computed(() => allRows.value.map(({ hallId: value, hallName }) => ({ hallId: value, hallName })));
+const rows = computed(() => hallId.value ? allRows.value.filter((row) => row.hallId === Number(hallId.value)) : allRows.value);
 const refreshDisabled = computed(() => refreshing.value || collectionStatus.value.status === 'RUNNING');
 const collectionStatusText = computed(() => {
 	const status = collectionStatus.value;
@@ -175,11 +183,11 @@ const load = async (showLoading = true) => {
 			rankKind: kind.value,
 			rankPeriod: period.value,
 			view: view.value,
-			hallId: hallId.value || undefined,
 		});
 		if (version !== requestVersion) return;
-		rows.value = response.data.rows ?? [];
+		allRows.value = response.data.rows ?? [];
 		collectionStatus.value = response.data.collectionStatus ?? collectionStatus.value;
+		return collectionStatus.value;
 	} catch (error) {
 		if (version !== requestVersion) return;
 		errorMessage.value = error instanceof Error ? error.message : '厅内榜单加载失败';
@@ -188,14 +196,8 @@ const load = async (showLoading = true) => {
 	}
 };
 
-const loadHalls = async () => {
-	const response: any = await getAnchorHallOptions();
-	halls.value = response.data.list ?? [];
-};
-
 const resetHall = () => {
 	hallId.value = '';
-	void load();
 };
 
 const toggleView = () => {
@@ -204,17 +206,35 @@ const toggleView = () => {
 };
 
 const runRefresh = async () => {
+	const version = ++refreshPollVersion;
 	refreshing.value = true;
 	errorMessage.value = '';
 	try {
-		await refreshRoomRanks();
-		ElMessage.success('厅内榜单刷新完成');
-		await load();
+		const response: any = await refreshRoomRanks();
+		if (!response.data?.accepted) throw new Error(response.data?.message || '厅内榜单刷新未受理');
+		collectionStatus.value = response.data.status ?? collectionStatus.value;
+		const status = await pollRefreshCompletion(version);
+		if (!status) return;
+		if (status.status === 'SUCCEEDED') ElMessage.success('厅内榜单刷新完成');
+		else if (status.status === 'PARTIAL') ElMessage.warning(`厅内榜单部分刷新成功：${status.succeeded}/${status.expected}`);
+		else if (status.status === 'FAILED') errorMessage.value = status.errorMessage || '厅内榜单刷新失败';
+		else errorMessage.value = '厅内榜单仍在刷新，请稍后查看';
 	} catch (error) {
 		errorMessage.value = error instanceof Error ? error.message : '厅内榜单刷新失败';
 	} finally {
-		refreshing.value = false;
+		if (version === refreshPollVersion) refreshing.value = false;
 	}
+};
+
+const pollRefreshCompletion = async (version: number): Promise<RoomRankCollectionStatus | undefined> => {
+	const deadline = Date.now() + 60_000;
+	while (pageActive && version === refreshPollVersion && Date.now() < deadline) {
+		await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+		if (!pageActive || version !== refreshPollVersion) return;
+		const status = await load(false);
+		if (status && status.status !== 'RUNNING') return status;
+	}
+	return collectionStatus.value;
 };
 
 const stopPolling = () => {
@@ -231,12 +251,25 @@ const startPolling = () => {
 
 watch([kind, period], () => { void load(); });
 onMounted(async () => {
-	await Promise.allSettled([loadHalls(), load()]);
+	pageActive = true;
+	await load();
 	startPolling();
 });
-onActivated(startPolling);
-onDeactivated(stopPolling);
-onUnmounted(stopPolling);
+onActivated(() => {
+	pageActive = true;
+	startPolling();
+});
+onDeactivated(() => {
+	pageActive = false;
+	refreshPollVersion++;
+	refreshing.value = false;
+	stopPolling();
+});
+onUnmounted(() => {
+	pageActive = false;
+	refreshPollVersion++;
+	stopPolling();
+});
 </script>
 
 <style scoped>

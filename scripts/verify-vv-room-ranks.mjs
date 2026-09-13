@@ -36,8 +36,16 @@ for (const needle of [
 	'onUnmounted',
 	'requestVersion',
 	'row.stale',
+	"auth('api/v1/system/flowData/roomRanks/refresh')",
+	'v-if="canRefresh"',
+	'helpPinned',
+	'pollRefreshCompletion',
 ]) {
 	if (!page.includes(needle)) throw new Error("missing room-rank page contract: " + needle);
+}
+
+for (const forbidden of ['getAnchorHallOptions', 'userId: string', 'roomId: string']) {
+	if (page.includes(forbidden) || api.includes(forbidden)) throw new Error("forbidden room-rank dependency or public field: " + forbidden);
 }
 
 for (const forbidden of ['修正差额', '历史已修正榜', '奖励发放', '奖励结算']) {
