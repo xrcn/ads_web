@@ -40,11 +40,16 @@ for (const needle of [
 	'v-if="canRefresh"',
 	'helpPinned',
 	'pollRefreshCompletion',
+	'row-key="hallId"',
+	':data="displayRows"',
+	'row.rankCells[rank.value - 1]',
+	'class="room-rank-table"',
+	'width="112"',
 ]) {
 	if (!page.includes(needle)) throw new Error("missing room-rank page contract: " + needle);
 }
 
-for (const forbidden of ['getAnchorHallOptions', 'userId: string', 'roomId: string']) {
+for (const forbidden of ['getAnchorHallOptions', 'userId: string', 'roomId: string', 'fixed prop="hallName"', 'fixed="right"', 'rankItem(row']) {
 	if (page.includes(forbidden) || api.includes(forbidden)) throw new Error("forbidden room-rank dependency or public field: " + forbidden);
 }
 

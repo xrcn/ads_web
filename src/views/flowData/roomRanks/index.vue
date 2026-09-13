@@ -64,26 +64,26 @@
 
 		<el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="error-alert" />
 
-		<el-table v-loading="loading" :data="rows" border stripe empty-text="暂无榜单数据">
-			<el-table-column fixed prop="hallName" label="所属厅" width="170">
+		<el-table v-loading="loading" :data="displayRows" row-key="hallId" class="room-rank-table" border stripe empty-text="暂无榜单数据">
+			<el-table-column prop="hallName" label="所属厅" width="200">
 				<template #default="{ row }">
 					<div class="hall-name">{{ row.hallName }}</div>
 					<div class="secondary">厅号 {{ row.hallId }}</div>
 				</template>
 			</el-table-column>
-			<el-table-column label="总流水" width="130" align="right">
+			<el-table-column label="总流水" width="100" align="right">
 				<template #default="{ row }"><strong>{{ row.hasData ? formatNumber(row.totalRank) : '-' }}</strong></template>
 			</el-table-column>
-			<el-table-column v-for="rank in rankColumns" :key="rank.value" :label="rank.label" width="145">
+			<el-table-column v-for="rank in rankColumns" :key="rank.value" :label="rank.label" width="112">
 				<template #default="{ row }">
-					<div v-if="rankItem(row, rank.value)" class="rank-cell">
-						<span>{{ rankItem(row, rank.value)?.userName || '匿名用户' }}</span>
-						<span class="score">{{ formatNumber(rankItem(row, rank.value)?.score || '0') }}</span>
+					<div v-if="row.rankCells[rank.value - 1]" class="rank-cell">
+						<span class="rank-name" :title="row.rankCells[rank.value - 1]?.userName || '匿名用户'">{{ row.rankCells[rank.value - 1]?.userName || '匿名用户' }}</span>
+						<span class="score">{{ formatNumber(row.rankCells[rank.value - 1]?.score || '0') }}</span>
 					</div>
-					<span v-else>-</span>
+					<span v-else class="empty-rank">-</span>
 				</template>
 			</el-table-column>
-			<el-table-column fixed="right" label="截榜时间" width="185">
+			<el-table-column label="截榜时间" width="180">
 				<template #default="{ row }">
 					<span :class="{ 'stale-time': row.stale }">{{ row.capturedAt || '-' }}</span>
 				</template>
@@ -130,6 +130,7 @@ const collectionStatus = ref<RoomRankCollectionStatus>({
 	finishedAt: '',
 	errorMessage: '',
 });
+type DisplayRoomRankRow = RoomRankRow & { rankCells: Array<RoomRankItem | undefined> };
 let requestVersion = 0;
 let refreshPollVersion = 0;
 let refreshTimer: number | undefined;
@@ -154,6 +155,10 @@ const canRefresh = auth('api/v1/system/flowData/roomRanks/refresh');
 const helpOpen = computed(() => helpPinned.value || helpHovered.value || helpFocused.value);
 const halls = computed(() => allRows.value.map(({ hallId: value, hallName }) => ({ hallId: value, hallName })));
 const rows = computed(() => hallId.value ? allRows.value.filter((row) => row.hallId === Number(hallId.value)) : allRows.value);
+const displayRows = computed<DisplayRoomRankRow[]>(() => rows.value.map((row) => ({
+	...row,
+	rankCells: rankColumns.map((rank) => row.items.find((item) => item.rank === rank.value)),
+})));
 const refreshDisabled = computed(() => refreshing.value || collectionStatus.value.status === 'RUNNING');
 const collectionStatusText = computed(() => {
 	const status = collectionStatus.value;
@@ -171,7 +176,6 @@ const collectionStatusText = computed(() => {
 	}
 });
 
-const rankItem = (row: RoomRankRow, rank: number): RoomRankItem | undefined => row.items.find((item) => item.rank === rank);
 const formatNumber = (value: string) => String(value || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 const load = async (showLoading = true) => {
@@ -280,7 +284,10 @@ onUnmounted(() => {
 .filters { margin-bottom: 2px; }
 .error-alert { margin-bottom: 16px; }
 .hall-name { font-weight: 500; }
-.rank-cell { display: flex; flex-direction: column; gap: 3px; }
+.room-rank-table :deep(.el-table__cell) { padding: 8px 0; }
+.rank-cell { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty-rank { color: var(--el-text-color-placeholder); }
 .score { color: var(--el-color-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
 .stale-time { color: var(--el-color-danger); font-weight: 500; }
 .help-wrap { position: relative; display: inline-flex; }
