@@ -109,6 +109,55 @@ export interface FlowDataHomeRankingQuery {
 	pageNum: number;
 }
 
+export type RoomRankKind = 'WEALTH' | 'HEART';
+export type RoomRankPeriod = 'DAY' | 'WEEK' | 'MONTH';
+export type RoomRankView = 'CURRENT' | 'PREVIOUS';
+
+export interface RoomRankItem {
+	rank: number;
+	userId: string;
+	userName: string;
+	score: string;
+}
+
+export interface RoomRankRow {
+	hallId: number;
+	hallName: string;
+	roomId: string;
+	periodKey: string;
+	totalRank: string;
+	capturedAt: string;
+	hasData: boolean;
+	stale: boolean;
+	items: RoomRankItem[];
+}
+
+export interface RoomRankCollectionStatus {
+	status: 'IDLE' | 'RUNNING' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED';
+	trigger: '' | 'AUTOMATIC' | 'MANUAL' | 'CUTOFF' | 'RESET';
+	expected: number;
+	succeeded: number;
+	failed: number;
+	startedAt: string;
+	finishedAt: string;
+	errorMessage: string;
+}
+
+export interface RoomRankResult {
+	rankKind: RoomRankKind;
+	rankPeriod: RoomRankPeriod;
+	view: RoomRankView;
+	rows: RoomRankRow[];
+	collectionStatus: RoomRankCollectionStatus;
+}
+
+export interface RoomRankQuery {
+	rankKind: RoomRankKind;
+	rankPeriod: RoomRankPeriod;
+	view: RoomRankView;
+	hallId?: number | string;
+}
+
 export const syncFlowData = () => request({ url: '/api/v1/system/flowData/sync', method: 'post', timeout: 180000 });
 export const getFlowDataSummary = () => request({ url: '/api/v1/system/flowData/summary', method: 'get' });
 export const getVVSyncProgress = (syncType: VVSyncType) => request({ url: '/api/v1/system/flowData/progress', method: 'get', params: { syncType } });
@@ -131,3 +180,5 @@ export const getAnchorActivityProgress = () => request({ url: '/api/v1/system/fl
 export const getAnchorActivityHallOptions = () => request({ url: '/api/v1/system/flowData/anchorActivity/hallOptions', method: 'get' });
 export const getFlowDataHomeOverview = (params: FlowDataHomeOverviewQuery = {}) => request({ url: '/api/v1/system/flowData/homeOverview', method: 'get', params, __skipGlobalErrorMessage: true } as any);
 export const getFlowDataHomeRanking = (params: FlowDataHomeRankingQuery) => request({ url: '/api/v1/system/flowData/homeRanking', method: 'get', params, __skipGlobalErrorMessage: true } as any);
+export const getRoomRanks = (params: RoomRankQuery) => request({ url: '/api/v1/system/flowData/roomRanks', method: 'get', params });
+export const refreshRoomRanks = () => request({ url: '/api/v1/system/flowData/roomRanks/refresh', method: 'post', timeout: 60000 });
