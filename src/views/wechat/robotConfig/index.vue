@@ -52,6 +52,18 @@
 								</el-descriptions-item>
 							</el-descriptions>
 						</template>
+						<template v-else-if="tab.name === 'current'">
+							<div class="panel-heading"><div><h4>当前麦序</h4><p>查看当前小时主持和 P1-P8 麦位，不在后台修改正在运行的档。</p></div><el-button :loading="currentQueueLoading" @click="loadCurrentQueue">刷新</el-button></div>
+							<div v-loading="currentQueueLoading" class="current-queue-panel">
+								<template v-if="currentQueueError"><el-alert :title="currentQueueError" type="error" show-icon :closable="false"/><el-button class="mt10" @click="loadCurrentQueue">重试</el-button></template>
+								<template v-else-if="currentQueue">
+									<div class="round-toolbar"><span>{{ currentQueue.groupName || overview.groupName }}</span><el-tag :type="currentQueue.runningStatus === 1 ? 'success' : 'info'">{{ currentQueue.runningStatus === 1 ? '运行中' : '已停止' }}</el-tag></div>
+									<div class="host-slot">主持位：{{ currentQueue.currentRound?.hostName || '暂未设置' }}</div>
+									<el-row :gutter="12"><el-col v-for="slot in currentQueue.currentRound?.slots || emptyQueueSlots" :key="slot.slotNo" :xs="12" :sm="8" :md="6"><div class="anchor-slot" :class="[slot.entryType?.toLowerCase(), { 'guest-slot': slot.isGuestSlot }]"><strong>P{{ slot.slotNo }}</strong><span>{{ slot.memberName || '空位' }}</span><small>{{ currentQueueSlotLabel(slot) }}</small></div></el-col></el-row>
+								</template>
+								<el-empty v-else description="暂无当前麦序数据" />
+							</div>
+						</template>
 						<template v-else-if="tab.name === 'queue'">
 							<div class="panel-heading"><div><h4>麦序规则</h4><p>保存后只影响后续新命令，不自动重排当前麦序。</p></div><el-button v-if="canSaveQueueRules" type="primary" :loading="queueSaving" @click="saveQueueRuleForm">保存本页</el-button></div>
 							<el-form :model="queueRules" label-width="130px" class="queue-form">
@@ -145,6 +157,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand } from '/@/api/wechatRobotGroup';
 import { auth } from '/@/utils/authFunction';
 import { servicePeriodTagType, servicePeriodText, servicePeriodValue } from '/@/utils/wechatServicePeriod';
+import { getWechatGroupScheduleOverview } from '/@/api/wechatGroupSchedule';
 
 defineOptions({ name: 'wechatRobotConfig' });
 
@@ -160,6 +173,7 @@ const settingsPreviewDialog = ref(false);
 const activeTab = ref('basic');
 const tabPosition = ref<'left' | 'top'>('left');
 const queueSaving=ref(false);const specialStatus=ref('AVAILABLE');const specialList=ref<any[]>([]);const specialCandidates=ref<any[]>([]);const grantMemberWxid=ref('');
+const canReadCurrentQueue=auth('api/v1/system/wechatGroupSchedule/overview');const currentQueue=ref<any>();const currentQueueLoading=ref(false);const currentQueueError=ref('');let currentQueueRequestGeneration=0;const emptyQueueSlots=Array.from({length:8},(_,index)=>({slotNo:index+1,memberName:'',entryType:'',taskAmount:''}));
 const queueRules=reactive({slotCount:8,speedPriorityCount:0,specialTopCount:0,speedTakeEnabled:1,taskTakeEnabled:0,guestSlotEnabled:0,p8Mode:'NORMAL',p8Name:'客麦位'});
 const canReadQueueRules=auth('api/v1/system/wechatRobotGroup/queueRules');const canSaveQueueRules=auth('api/v1/system/wechatRobotGroup/queueRulesSave');const canListSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopList');const canGrantSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopGrant');const canCancelSpecialTop=auth('api/v1/system/wechatRobotGroup/specialTopCancel');
 const canReadTiming=auth('api/v1/system/wechatRobotGroup/scheduleTiming');const canSaveTiming=auth('api/v1/system/wechatRobotGroup/scheduleTimingSave');const canSaveTaskReminders=auth('api/v1/system/wechatRobotGroup/taskReminderMinutesSave');const timingSaving=ref(false);const allHours=Array.from({length:24},(_,i)=>i);const reminderMinutes=Array.from({length:59},(_,i)=>i+1);const timing=reactive<any>({scheduleCreateMinute:45,scheduleLockMinute:58,supplementCloseMinutes:30,takeCloseMinutes:30,p8PurchaseCloseMinutes:60,activeHours:[],taskReminderMinutes:[],hostStates:[]});const timingFields=[{key:'scheduleCreateMinute',label:'麦序开始分钟',min:0,max:59},{key:'scheduleLockMinute',label:'麦序截止分钟',min:0,max:59},{key:'supplementCloseMinutes',label:'整点后补位时间',min:0,max:60},{key:'takeCloseMinutes',label:'整点后取排时间',min:0,max:60},{key:'p8PurchaseCloseMinutes',label:'整点后购买P8时间',min:0,max:60}];let savedCreateMinute=45;
@@ -172,6 +186,7 @@ const canReadAdmins=auth('api/v1/system/wechatRobotGroup/permissionAdmins');cons
 const mobileMedia = window.matchMedia('(max-width: 768px)');
 const tabs = [
 	{ name: 'basic', label: '基础信息', description: '群、厅号、绑定机器人和启停状态。' },
+	...(canReadCurrentQueue ? [{ name: 'current', label: '当前麦序', description: '当前小时主持与 P1-P8 麦位。' }] : []),
 	{ name: 'queue', label: '麦序规则', description: '扣排、手速、置顶、取排和 P8 规则。' },
 	{ name: 'timing', label: '定时排档', description: '麦序生命周期分钟、启用排档时段和 P8 购买时间。' },
 	{ name: 'schedule', label: '固定档与主持', description: '24 小时固定成员、主持和虚拟主持开厅。' },
@@ -232,6 +247,8 @@ const loadGroups = async () => {
 };
 
 const loadQueueRules=async()=>{if(!selectedGroupId.value||!canReadQueueRules)return;const res:any=await getWechatRobotGroupQueueRules(selectedGroupId.value);Object.assign(queueRules,res.data);};
+const currentQueueSlotLabel=(slot:any)=>{if(slot.isGuestSlot)return currentQueue.value?.p8Mode==='TASK_ONLY'?'仅任务排可占用':'不参与助手排麦';if(!slot.memberName)return'暂无排档';if(slot.entryType==='TASK')return`任务 ${slot.taskAmount||''}`;if(slot.entryType==='FIXED')return'固定档';if(slot.entryType==='SUPPLEMENT')return'补位';return'普通排';};
+const loadCurrentQueue=async()=>{if(!selectedGroupId.value||!canReadCurrentQueue)return;const groupId=selectedGroupId.value;const generation=++currentQueueRequestGeneration;currentQueueLoading.value=true;currentQueueError.value='';currentQueue.value=undefined;try{const res:any=await getWechatGroupScheduleOverview(groupId);if(generation===currentQueueRequestGeneration&&selectedGroupId.value===groupId)currentQueue.value=res.data;}catch(error:any){if(generation===currentQueueRequestGeneration&&selectedGroupId.value===groupId)currentQueueError.value=error?.message||'当前麦序加载失败';}finally{if(generation===currentQueueRequestGeneration)currentQueueLoading.value=false;}};
 const loadSpecialTop=async()=>{if(!selectedGroupId.value||!canListSpecialTop)return;const res:any=await getWechatRobotGroupSpecialTopList(selectedGroupId.value,specialStatus.value);specialList.value=res.data.list||[];specialCandidates.value=res.data.candidates||[];};
 const loadQueueTab=async()=>{await Promise.all([loadQueueRules(),loadSpecialTop()]);};
 const saveQueueRuleForm=async()=>{if(!selectedGroupId.value)return;if(queueRules.specialTopCount+queueRules.speedPriorityCount>queueRules.slotCount){ElMessage.error('特殊置顶人数与手速优先人数之和不能超过扣排人数');return;}queueSaving.value=true;try{const res:any=await saveWechatRobotGroupQueueRules({groupId:selectedGroupId.value,...queueRules});Object.assign(queueRules,res.data);ElMessage.success('麦序规则已保存');}finally{queueSaving.value=false;}};
@@ -248,7 +265,7 @@ const loadReminderConfig=async()=>{if(!selectedGroupId.value||!canReadReminders)
 const openPermissionAudit=async()=>{const res:any=await getWechatRobotGroupPermissionReminderAudit(selectedGroupId.value!);permissionAudits.value=res.data.list||[];permissionAuditDrawer.value=true;};
 const loadPermissionSubTab=()=>{if(permissionSubTab.value==='admins'){loadSpecialTop();loadPermissionAdmins();}if(permissionSubTab.value==='reminders')loadReminderConfig();};
 const loadPermissionTab=()=>{loadTiming();loadPermissionSubTab();};
-watch(permissionSubTab,loadPermissionSubTab);watch(activeTab,(value)=>{if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();});watch(selectedGroupId,()=>{if(activeTab.value==='queue')loadQueueTab();if(activeTab.value==='timing')loadTiming();if(activeTab.value==='schedule')loadSchedulePlan();if(activeTab.value==='report')loadReport();if(activeTab.value==='checkin')loadStatistics();if(activeTab.value==='permission')loadPermissionTab();if(activeTab.value==='template')loadTemplateCommands();});
+watch(permissionSubTab,loadPermissionSubTab);watch(activeTab,(value)=>{if(value==='current')loadCurrentQueue();if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();});watch(selectedGroupId,()=>{currentQueueRequestGeneration++;currentQueue.value=undefined;currentQueueError.value='';currentQueueLoading.value=false;if(activeTab.value==='current')loadCurrentQueue();if(activeTab.value==='queue')loadQueueTab();if(activeTab.value==='timing')loadTiming();if(activeTab.value==='schedule')loadSchedulePlan();if(activeTab.value==='report')loadReport();if(activeTab.value==='checkin')loadStatistics();if(activeTab.value==='permission')loadPermissionTab();if(activeTab.value==='template')loadTemplateCommands();});
 
 onMounted(() => {
 	syncTabPosition();
@@ -268,5 +285,6 @@ onBeforeUnmount(() => mobileMedia.removeEventListener('change', syncTabPosition)
 .exception-form{display:grid;grid-template-columns:110px 1fr auto;gap:8px;margin:12px 0}
 .form-tip{margin-left:12px;color:var(--el-text-color-secondary);font-size:12px}.statistics-preview pre{margin:0;white-space:pre-wrap;line-height:1.8;font-family:"LXGW WenKai",serif}
 .template-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) 160px;gap:10px;margin-bottom:12px}.template-command-editor{padding:12px 18px}.scenario-card{margin:10px 0}.scenario-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.variable-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.template-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}.multiline-text{white-space:pre-line}
+.current-queue-panel{min-height:180px}.round-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-weight:600}.host-slot{max-width:280px;margin:0 auto 14px;text-align:center;padding:11px;border:1px solid var(--el-color-warning-light-5);border-radius:6px;background:var(--el-color-warning-light-9);color:var(--el-color-warning-dark-2)}.anchor-slot{min-height:82px;margin-bottom:12px;padding:12px;border:1px solid var(--el-border-color);border-radius:6px;display:flex;flex-direction:column;gap:5px}.anchor-slot strong{color:var(--el-color-primary)}.anchor-slot small{color:var(--el-text-color-secondary)}.anchor-slot.fixed{border-color:var(--el-color-success-light-5);background:var(--el-color-success-light-9)}.anchor-slot.task{border-color:var(--el-color-warning-light-5);background:var(--el-color-warning-light-9)}.anchor-slot.guest-slot{border-style:dashed;border-color:var(--el-color-info-light-5);background:var(--el-fill-color-light)}.anchor-slot.guest-slot strong{color:var(--el-color-info)}
 @media (max-width: 768px) { .mobile-robot-config { .config-header,.header-actions,.panel-heading,.scenario-header,.admin-toolbar { width:100%;align-items:stretch;flex-direction:column; } .header-actions :deep(.el-select),.template-toolbar,.exception-form { width:100%;grid-template-columns:minmax(0,1fr); } .config-tabs :deep(.el-tabs__nav-scroll) { overflow-x:auto; } .config-tabs :deep(.el-table) { display:none; } .overview-status :deep(td),.overview-status :deep(.el-descriptions__content) { overflow-wrap:anywhere; } :deep(.el-drawer) { width: 100% !important; } .robot-config-mobile-summary{display:grid} } .mobile-config-tabs-collapsed { min-height:0; } .config-tabs { :deep(.el-tabs__content) { padding: 10px 0 0; } } .overview-status { :deep(.el-descriptions__body) { overflow-x: auto; } } }
 </style>

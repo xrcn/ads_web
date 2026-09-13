@@ -8,14 +8,6 @@ export function getWechatGroupScheduleOverview(groupId: number) {
 	});
 }
 
-export function saveWechatGroupScheduleConfig(data: object) {
-	return request({
-		url: '/api/v1/system/wechatGroupSchedule/config',
-		method: 'put',
-		data,
-	});
-}
-
 export function getWechatGroupScheduleDurationSummary(params: object) {
 	return request({
 		url: '/api/v1/system/wechatGroupSchedule/duration/summary',
