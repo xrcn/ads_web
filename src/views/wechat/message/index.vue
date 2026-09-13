@@ -19,6 +19,7 @@
 					<el-select v-model="query.commandName" clearable placeholder="全部" style="width: 170px">
 						<el-option label="排麦" value="QUEUE_SELF" />
 						<el-option label="当前麦序" value="CURRENT_QUEUE" />
+						<el-option label="AI聊天" value="AI_CHAT" />
 					</el-select>
 				</el-form-item>
 				<el-form-item label="状态">
@@ -47,6 +48,7 @@
 				<el-table-column prop="status" label="状态" width="120">
 					<template #default="{ row }"><el-tag :type="statusType(row.status)">{{ row.status }}</el-tag></template>
 				</el-table-column>
+				<el-table-column label="处理耗时" width="110"><template #default="{ row }">{{processingTime(row.processingMilliseconds)}}</template></el-table-column>
 				<el-table-column prop="replyContent" label="回复内容" min-width="220" show-overflow-tooltip />
 				<el-table-column prop="errorMessage" label="错误" min-width="180" show-overflow-tooltip />
 				<el-table-column label="操作" width="90" fixed="right">
@@ -57,7 +59,7 @@
 			<template #default="{ row }">
 				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.receivedAt || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.groupName || row.groupWxid || '-' }}</p></div><el-tag :type="statusType(row.status)">{{ row.status || '-' }}</el-tag></div>
 				<dl class="mobile-record-card__fields"><div><dt>发送者</dt><dd>{{ row.senderWxid || '-' }}</dd></div><div><dt>消息内容</dt><dd>{{ row.content || '-' }}</dd></div><div><dt>回复内容</dt><dd>{{ row.replyContent || '-' }}</dd></div></dl>
-				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>命令</dt><dd>{{ commandLabel(row.commandName) }}</dd></div><div><dt>错误</dt><dd>{{ row.errorMessage || '-' }}</dd></div><div><dt>群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div></dl></details>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>命令</dt><dd>{{ commandLabel(row.commandName) }}</dd></div><div><dt>处理耗时</dt><dd>{{processingTime(row.processingMilliseconds)}}</dd></div><div><dt>错误</dt><dd>{{ row.errorMessage || '-' }}</dd></div><div><dt>群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div></dl></details>
 				<div class="mobile-record-card__actions"><el-button type="primary" @click="openDetail(row.id)">详情</el-button></div>
 			</template>
 			</MobileRecordList>
@@ -68,6 +70,7 @@
 			<el-descriptions v-if="detail" :column="2" border>
 				<el-descriptions-item label="接收时间">{{ detail.receivedAt }}</el-descriptions-item>
 				<el-descriptions-item label="处理时间">{{ detail.processedAt || '-' }}</el-descriptions-item>
+				<el-descriptions-item label="处理耗时">{{ processingTime(detail.processingMilliseconds) }}</el-descriptions-item>
 				<el-descriptions-item label="微信群">{{ detail.groupName || detail.groupWxid }}</el-descriptions-item>
 				<el-descriptions-item label="发送者">{{ detail.senderWxid }}</el-descriptions-item>
 				<el-descriptions-item label="实际执行者">{{ detail.actorName || detail.actorWxid || '-' }}</el-descriptions-item>
@@ -110,7 +113,8 @@ const loadList = () => {
 const search = () => { query.pageNum = 1; loadList(); };
 const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', commandName: '', status: '', pageNum: 1, pageSize: 10 }); dateRange.value = []; loadList(); };
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
-const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序' }[value] || '-');
+const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序', AI_CHAT: 'AI聊天' }[value] || '-');
+const processingTime = (value: number) => value > 0 ? `${(value / 1000).toFixed(value >= 1000 ? 1 : 3)}秒` : '-';
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
 const authoritySourceLabel = (value: string) => ({ GLOBAL_OPERATOR: '全局运维', OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
 const formatJson = (value: unknown) => {
