@@ -157,7 +157,7 @@ const halls = computed(() => allRows.value.map(({ hallId: value, hallName }) => 
 const rows = computed(() => hallId.value ? allRows.value.filter((row) => row.hallId === Number(hallId.value)) : allRows.value);
 const displayRows = computed<DisplayRoomRankRow[]>(() => rows.value.map((row) => ({
 	...row,
-	rankCells: rankColumns.map((rank) => row.items.find((item) => item.rank === rank.value)),
+	rankCells: rankColumns.map((rank) => (row.items ?? []).find((item) => item.rank === rank.value)),
 })));
 const refreshDisabled = computed(() => refreshing.value || collectionStatus.value.status === 'RUNNING');
 const collectionStatusText = computed(() => {

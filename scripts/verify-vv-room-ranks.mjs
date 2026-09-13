@@ -43,6 +43,7 @@ for (const needle of [
 	'row-key="hallId"',
 	':data="displayRows"',
 	'row.rankCells[rank.value - 1]',
+	'(row.items ?? []).find',
 	'class="room-rank-table"',
 	'width="112"',
 ]) {
