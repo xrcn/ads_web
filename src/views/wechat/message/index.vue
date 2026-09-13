@@ -19,7 +19,7 @@
 					<el-select v-model="query.commandName" clearable placeholder="全部" style="width: 170px">
 						<el-option label="排麦" value="QUEUE_SELF" />
 						<el-option label="当前麦序" value="CURRENT_QUEUE" />
-						<el-option label="AI聊天" value="AI_CHAT" />
+						<el-option v-if="canViewAIChat" label="AI聊天" value="AI_CHAT" />
 					</el-select>
 				</el-form-item>
 				<el-form-item label="状态">
@@ -92,8 +92,10 @@
 import { onMounted, reactive, ref } from 'vue';
 import { getWechatMessageDetail, getWechatMessageList } from '/@/api/wechatMessage';
 import { getWechatRobotGroupList } from '/@/api/wechatRobotGroup';
+import { auth } from '/@/utils/authFunction';
 
 defineOptions({ name: 'wechatMessage' });
+const canViewAIChat = auth('api/v1/system/wechatRobotGroup/aiChatConfig');
 const statuses = ['RECEIVED', 'PROCESSING', 'PROCESSED', 'IGNORED', 'REPLY_FAILED', 'FAILED'];
 const loading = ref(false);
 const list = ref<any[]>([]);

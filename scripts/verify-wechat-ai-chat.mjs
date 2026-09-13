@@ -16,10 +16,13 @@ for (const expected of [
 	"name: 'aiChat'",
 	'小助手聊天',
 	'configurationReady',
+	'aiChatRequestGeneration',
+	'loadedAIChatGroupId',
+	'selectedGroupId.value===groupId',
 ]) {
 	if (!config.includes(expected)) throw new Error(`missing robot config contract ${expected}`);
 }
-for (const expected of ["AI_CHAT: 'AI聊天'", 'processingMilliseconds', '处理耗时']) {
+for (const expected of ["AI_CHAT: 'AI聊天'", 'processingMilliseconds', '处理耗时', 'canViewAIChat']) {
 	if (!messages.includes(expected)) throw new Error(`missing message audit contract ${expected}`);
 }
 
