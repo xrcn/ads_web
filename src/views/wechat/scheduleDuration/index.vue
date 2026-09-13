@@ -4,9 +4,9 @@
 			<el-form :model="query" inline label-width="78px" class="mb15">
 				<el-form-item label="统计日期"><el-date-picker v-model="query.startDate" value-format="YYYY-MM-DD" /><span class="date-separator">至</span><el-date-picker v-model="query.endDate" value-format="YYYY-MM-DD" /></el-form-item>
 				<el-form-item label="微信群"><el-select v-model="query.groupId" clearable filterable placeholder="全部" style="width: 220px"><el-option v-for="item in groups" :key="item.id" :label="item.groupName" :value="item.id" /></el-select></el-form-item>
-				<el-form-item label="主播"><el-input v-model="query.keyword" clearable placeholder="昵称或 wxid" @keyup.enter="loadData" /></el-form-item>
+				<el-form-item label="主播"><el-input v-model="query.keyword" clearable placeholder="昵称或 wxid" @keyup.enter="search" /></el-form-item>
 				<el-form-item label="状态"><el-select v-model="query.status" style="width: 120px"><el-option label="有效" value="ACTIVE" /><el-option label="全部" value="ALL" /><el-option label="已作废" value="VOIDED" /></el-select></el-form-item>
-				<el-form-item><el-button type="primary" @click="loadData"><el-icon><ele-Search /></el-icon>查询</el-button><el-button @click="resetQuery"><el-icon><ele-Refresh /></el-icon>重置</el-button><el-button type="success" plain @click="openManual"><el-icon><ele-FolderAdd /></el-icon>补录时长</el-button></el-form-item>
+				<el-form-item><el-button type="primary" @click="search"><el-icon><ele-Search /></el-icon>查询</el-button><el-button @click="resetQuery"><el-icon><ele-Refresh /></el-icon>重置</el-button><el-button type="success" plain @click="openManual"><el-icon><ele-FolderAdd /></el-icon>补录时长</el-button></el-form-item>
 			</el-form>
 
 			<el-row :gutter="15" class="mb15">
@@ -20,7 +20,6 @@
 				<el-table-column prop="businessDate" label="日期" width="110" />
 				<el-table-column prop="groupName" label="微信群" min-width="150" show-overflow-tooltip />
 				<el-table-column prop="memberName" label="主播昵称" min-width="130" show-overflow-tooltip />
-				<el-table-column prop="memberWxid" label="主播 wxid" min-width="160" show-overflow-tooltip />
 				<el-table-column prop="enteredAt" label="上麦时间" width="170" />
 				<el-table-column prop="leftAt" label="下麦时间" width="170" />
 				<el-table-column label="时长" width="105" align="right"><template #default="{ row }">{{ row.minutes }} 分钟</template></el-table-column>
@@ -31,9 +30,10 @@
 			</el-table></template><template #default="{ row }">
 				<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.memberName || '-' }}</h3><p class="mobile-record-card__subtitle">{{ row.businessDate || '-' }}</p></div><el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status === 'ACTIVE' ? '有效' : '已作废' }}</el-tag></div>
 				<dl class="mobile-record-card__fields"><div><dt>微信群</dt><dd>{{ row.groupName || '-' }}</dd></div><div><dt>时段</dt><dd>{{ row.enteredAt || '-' }} 至 {{ row.leftAt || '-' }}</dd></div><div><dt>时长</dt><dd>{{ row.minutes }} 分钟（{{ row.source === 'MANUAL' ? '手工补录' : '自动统计' }}）</dd></div></dl>
-				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>主播 wxid</dt><dd>{{ row.memberWxid || '-' }}</dd></div><div><dt>最后原因</dt><dd>{{ row.lastReason || '-' }}</dd></div></dl></details>
+				<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>最后原因</dt><dd>{{ row.lastReason || '-' }}</dd></div></dl></details>
 				<div class="mobile-record-card__actions"><el-button type="primary" @click="openDetail(row)">详情</el-button><el-button v-if="row.status === 'ACTIVE'" @click="openEdit(row)">修正</el-button><el-dropdown v-if="row.status === 'ACTIVE'"><el-button>更多</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item><el-button text type="danger" @click="voidRecord(row)">作废</el-button></el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
 			</template></MobileRecordList>
+			<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="loadList" />
 		</el-card>
 
 		<el-drawer v-model="detailVisible" title="主播麦序时长详情" size="520px">
@@ -96,15 +96,20 @@ const editing = ref<any>();
 const groups = ref<any[]>([]);
 const details = ref<any[]>([]);
 const summary = reactive({ anchorCount: 0, recordCount: 0, totalMinutes: 0 });
-const query = reactive({ startDate: today, endDate: today, groupId: '' as number | '', keyword: '', status: 'ACTIVE' });
+const total = ref(0);
+const query = reactive({ startDate: today, endDate: today, groupId: '' as number | '', keyword: '', status: 'ACTIVE', pageNum: 1, pageSize: 20 });
 const createForm = () => ({ groupId: '' as number | '', memberWxid: '', memberName: '', enteredAt: '', leftAt: '', reason: '' });
 const form = reactive(createForm());
 const rules: FormRules = { groupId: [{ required: true, message: '请选择微信群', trigger: 'change' }], memberWxid: [{ required: true, message: '请输入主播 wxid', trigger: 'blur' }], memberName: [{ required: true, message: '请输入主播昵称', trigger: 'blur' }], enteredAt: [{ required: true, message: '请选择上麦时间', trigger: 'change' }], leftAt: [{ required: true, message: '请选择下麦时间', trigger: 'change' }], reason: [{ required: true, message: '请输入操作原因', trigger: 'blur' }] };
 const hours = (minutes: number) => Number((minutes / 60).toFixed(2));
 const requestParams = () => ({ ...query, groupId: query.groupId || undefined });
+let listRequestId = 0;
 const loadGroups = () => getWechatRobotGroupList({ pageNum: 1, pageSize: 1000, status: 1 }).then((res: any) => { groups.value = res.data.list || []; });
-const loadData = () => { loading.value = true; Promise.all([getWechatGroupScheduleDurationSummary(requestParams()), getWechatGroupScheduleDurationDetail(requestParams())]).then(([summaryRes, detailRes]: any[]) => { Object.assign(summary, summaryRes.data || {}); details.value = detailRes.data.list || []; }).finally(() => { loading.value = false; }); };
-const resetQuery = () => { Object.assign(query, { startDate: today, endDate: today, groupId: '', keyword: '', status: 'ACTIVE' }); loadData(); };
+const loadSummary = () => getWechatGroupScheduleDurationSummary({ startDate: query.startDate, endDate: query.endDate, groupId: query.groupId || undefined, keyword: query.keyword, status: query.status, compact: 1 }).then((res: any) => { Object.assign(summary, res.data || {}); });
+const loadList = () => { const requestId = ++listRequestId; loading.value = true; return getWechatGroupScheduleDurationDetail(requestParams()).then((res: any) => { if (requestId !== listRequestId) return; details.value = res.data.list || []; total.value = res.data.total || 0; }).finally(() => { if (requestId === listRequestId) loading.value = false; }); };
+const loadData = () => Promise.all([loadSummary(), loadList()]).then(async () => { const lastPage = Math.max(1, Math.ceil(total.value / query.pageSize)); if (query.pageNum > lastPage) { query.pageNum = lastPage; await loadList(); } });
+const search = () => { query.pageNum = 1; loadData(); };
+const resetQuery = () => { Object.assign(query, { startDate: today, endDate: today, groupId: '', keyword: '', status: 'ACTIVE', pageNum: 1, pageSize: 20 }); loadData(); };
 const formatSnapshot = (value: string) => { try { return JSON.stringify(JSON.parse(value || '{}'), null, 2); } catch { return value || '{}'; } };
 const openDetail = (row: any) => { selected.value = row; audits.value = []; detailVisible.value = true; getWechatGroupScheduleDurationAudit({ id: row.id, recordType: row.source }).then((res: any) => { audits.value = res.data.list || []; }); };
 const openManual = () => { Object.assign(form, createForm()); formMode.value = 'MANUAL'; formVisible.value = true; };
