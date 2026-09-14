@@ -20,6 +20,7 @@
 						<el-option label="排麦" value="QUEUE_SELF" />
 						<el-option label="当前麦序" value="CURRENT_QUEUE" />
 						<el-option v-if="canViewAIChat" label="AI聊天" value="AI_CHAT" />
+						<el-option v-if="canViewAIChat" label="业务查询" value="AI_BUSINESS_QUERY" />
 					</el-select>
 				</el-form-item>
 				<el-form-item label="状态">
@@ -81,7 +82,8 @@
 				<el-descriptions-item label="消息内容" :span="2">{{ detail.content }}</el-descriptions-item>
 			</el-descriptions>
 			<div v-for="item in detail?.outbounds || []" :key="item.id">
-				<div class="detail-title">出站响应（{{ item.status }}）</div>
+				<div class="detail-title">出站响应（{{ item.messageType }} / {{ item.replyStage }} / {{ item.status }}）</div>
+				<div>{{ item.content || '-' }}</div>
 				<el-input :model-value="formatJson(item.providerResponse)" type="textarea" :rows="8" readonly />
 			</div>
 		</el-dialog>
@@ -115,7 +117,7 @@ const loadList = () => {
 const search = () => { query.pageNum = 1; loadList(); };
 const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', commandName: '', status: '', pageNum: 1, pageSize: 10 }); dateRange.value = []; loadList(); };
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
-const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序', AI_CHAT: 'AI聊天' }[value] || '-');
+const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序', AI_CHAT: 'AI聊天', AI_BUSINESS_QUERY: '业务查询' }[value] || '-');
 const processingTime = (value: number) => value > 0 ? `${(value / 1000).toFixed(value >= 1000 ? 1 : 3)}秒` : '-';
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
 const authoritySourceLabel = (value: string) => ({ GLOBAL_OPERATOR: '全局运维', OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
