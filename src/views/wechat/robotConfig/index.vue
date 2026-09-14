@@ -53,10 +53,10 @@
 							</el-descriptions>
 						</template>
 						<template v-else-if="tab.name === 'aiChat'">
-							<div class="panel-heading"><div><h4>小助手聊天</h4><p>只有群成员明确 @ 当前机器人群昵称时才会回复。</p></div><el-button v-if="canSaveAIChat" type="primary" :loading="aiChatSaving" @click="saveAIChatForm">保存本页</el-button></div>
+							<div class="panel-heading"><div><h4>小助手聊天</h4><p>只有群成员明确 @ 自动识别的机器人昵称时才会回复。</p></div><el-button v-if="canSaveAIChat" type="primary" :loading="aiChatSaving" @click="saveAIChatForm">保存本页</el-button></div>
 							<el-alert v-if="!aiChatConfig.configurationReady" title="模型配置尚未就绪，只能保持关闭" type="warning" show-icon :closable="false" class="mb15" />
-							<el-alert v-else-if="!aiChatConfig.robotGroupNickname" title="机器人群昵称为空，请先同步昵称" type="warning" show-icon :closable="false" class="mb15" />
-							<el-form label-width="150px"><el-form-item label="机器人群昵称"><span>{{aiChatConfig.robotGroupNickname||'未设置'}}</span></el-form-item><el-form-item label="小助手聊天"><el-switch v-model="aiChatConfig.enabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.enabled!==1&&(!aiChatConfig.configurationReady||!aiChatConfig.robotGroupNickname)"/><span class="form-tip">默认关闭；现有命令不受影响</span></el-form-item></el-form>
+							<el-alert v-else-if="!aiChatConfig.robotGroupNickname" title="机器人触发昵称正在自动识别，开启后会在识别成功时自动生效" type="info" show-icon :closable="false" class="mb15" />
+							<el-form label-width="150px"><el-form-item label="机器人触发昵称"><span>{{aiChatConfig.robotGroupNickname||'自动识别中'}}</span></el-form-item><el-form-item label="小助手聊天"><el-switch v-model="aiChatConfig.enabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.enabled!==1&&!aiChatConfig.configurationReady"/><span class="form-tip">默认关闭；现有命令不受影响</span></el-form-item></el-form>
 						</template>
 						<template v-else-if="tab.name === 'current'">
 							<div class="panel-heading"><div><h4>当前麦序</h4><p>查看当前小时主持和 P1-P8 麦位，不在后台修改正在运行的档。</p></div><el-button :loading="currentQueueLoading" @click="loadCurrentQueue">刷新</el-button></div>
@@ -257,7 +257,7 @@ const loadGroups = async () => {
 };
 
 const loadAIChat=async()=>{if(!selectedGroupId.value||!canReadAIChat)return;const groupId=selectedGroupId.value;const generation=++aiChatRequestGeneration;loadedAIChatGroupId.value=undefined;Object.assign(aiChatConfig,{enabled:0,robotGroupNickname:'',configurationReady:false});const res:any=await getWechatRobotGroupAIChatConfig(groupId);if(generation===aiChatRequestGeneration&&selectedGroupId.value===groupId){Object.assign(aiChatConfig,res.data);loadedAIChatGroupId.value=groupId;}};
-const saveAIChatForm=async()=>{const groupId=selectedGroupId.value;if(!groupId||!canSaveAIChat)return;if(loadedAIChatGroupId.value!==groupId){ElMessage.error('当前群配置尚未加载完成');return;}if(aiChatConfig.enabled===1&&(!aiChatConfig.configurationReady||!aiChatConfig.robotGroupNickname)){ElMessage.error('模型配置或机器人群昵称尚未就绪');return;}const enabled=aiChatConfig.enabled;const generation=++aiChatRequestGeneration;aiChatSaving.value=true;try{const res:any=await saveWechatRobotGroupAIChatConfig({groupId,enabled});if(generation===aiChatRequestGeneration&&selectedGroupId.value===groupId){Object.assign(aiChatConfig,res.data);loadedAIChatGroupId.value=groupId;ElMessage.success('小助手聊天配置已保存');}}finally{aiChatSaving.value=false;}};
+const saveAIChatForm=async()=>{const groupId=selectedGroupId.value;if(!groupId||!canSaveAIChat)return;if(loadedAIChatGroupId.value!==groupId){ElMessage.error('当前群配置尚未加载完成');return;}if(aiChatConfig.enabled===1&&!aiChatConfig.configurationReady){ElMessage.error('模型配置尚未就绪');return;}const enabled=aiChatConfig.enabled;const generation=++aiChatRequestGeneration;aiChatSaving.value=true;try{const res:any=await saveWechatRobotGroupAIChatConfig({groupId,enabled});if(generation===aiChatRequestGeneration&&selectedGroupId.value===groupId){Object.assign(aiChatConfig,res.data);loadedAIChatGroupId.value=groupId;ElMessage.success('小助手聊天配置已保存');}}finally{aiChatSaving.value=false;}};
 
 const loadQueueRules=async()=>{if(!selectedGroupId.value||!canReadQueueRules)return;const res:any=await getWechatRobotGroupQueueRules(selectedGroupId.value);Object.assign(queueRules,res.data);};
 const currentQueueSlotLabel=(slot:any)=>{if(slot.isGuestSlot)return currentQueue.value?.p8Mode==='TASK_ONLY'?'仅任务排可占用':'不参与助手排麦';if(!slot.memberName)return'暂无排档';if(slot.entryType==='TASK')return`任务 ${slot.taskAmount||''}`;if(slot.entryType==='FIXED')return'固定档';if(slot.entryType==='SUPPLEMENT')return'补位';return'普通排';};

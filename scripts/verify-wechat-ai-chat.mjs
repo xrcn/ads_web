@@ -19,6 +19,9 @@ for (const expected of [
 	'aiChatRequestGeneration',
 	'loadedAIChatGroupId',
 	'selectedGroupId.value===groupId',
+	':disabled="aiChatConfig.enabled!==1&&!aiChatConfig.configurationReady"',
+	'if(aiChatConfig.enabled===1&&!aiChatConfig.configurationReady)',
+	'自动识别中',
 ]) {
 	if (!config.includes(expected)) throw new Error(`missing robot config contract ${expected}`);
 }
