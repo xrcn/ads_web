@@ -9,7 +9,7 @@ for (const required of [
 	'@change="changeMemoryType"',
 	'@change="changeMemoryScope"',
 	'@change="changeMemoryGroup"',
-	':disabled="form.memoryType!==\'PERSON\'"',
+	':disabled="form.memoryType!==\'PERSON\'||form.scopeType===\'GLOBAL\'"',
 	"form.subjectWxid=''",
 	"form.scopeType='GROUP'",
 	"form.sensitivity='NORMAL'",
@@ -18,6 +18,11 @@ for (const required of [
 	'memberRequestSequence',
 	'request!==memberRequestSequence',
 	'Number(form.groupId)!==groupId',
+	':disabled="form.memoryType===\'CONVERSATION\'"',
+	"form.scopeType==='GROUP'||form.memoryType==='PERSON'",
+	'row.subjectGroupId||row.groupId',
+	"form.scopeType==='GROUP'||form.memoryType==='PERSON'?form.groupId||undefined:undefined",
+	"if(form.scopeType==='GLOBAL')form.sensitivity='NORMAL'",
 ]) {
 	if (!source.includes(required)) {
 		throw new Error(`memory edit contract missing: ${required}`);
