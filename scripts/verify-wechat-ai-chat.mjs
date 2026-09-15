@@ -7,6 +7,7 @@ const messages = fs.readFileSync(new URL('../src/views/wechat/message/index.vue'
 const assertMatch = (source, pattern, description) => {
 	if (!pattern.test(source)) throw new Error(`missing anchored contract ${description}`);
 };
+const getDeclaration = (source, name) => source.match(new RegExp(`export const ${name}\\s*=\\s*[^;]*;`))?.[0] || '';
 
 for (const expected of [
 	'/api/v1/system/wechatRobotGroup/aiChatConfig',
@@ -16,8 +17,10 @@ for (const expected of [
 ]) {
 	if (!api.includes(expected)) throw new Error(`missing API ${expected}`);
 }
-assertMatch(api, /export const getWechatRobotGroupAIChatConfig\s*=\s*\(groupId\s*:\s*number\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat get response');
-assertMatch(api, /export const saveWechatRobotGroupAIChatConfig\s*=\s*\(data\s*:\s*WechatRobotGroupAIChatConfigSave\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat save payload and response');
+const getAIChatDeclaration = getDeclaration(api, 'getWechatRobotGroupAIChatConfig');
+const saveAIChatDeclaration = getDeclaration(api, 'saveWechatRobotGroupAIChatConfig');
+assertMatch(getAIChatDeclaration, /export const getWechatRobotGroupAIChatConfig\s*=\s*\(groupId\s*:\s*number\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat get response');
+assertMatch(saveAIChatDeclaration, /export const saveWechatRobotGroupAIChatConfig\s*=\s*\(data\s*:\s*WechatRobotGroupAIChatConfigSave\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat save payload and response');
 for (const expected of [
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfig')",
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfigSave')",
