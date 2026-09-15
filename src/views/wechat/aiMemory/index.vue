@@ -35,14 +35,14 @@
 
 		<el-dialog v-model="formVisible" :title="form.id?'编辑记忆':'新增记忆'" width="640px" destroy-on-close>
 			<el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-				<el-form-item label="类型" prop="memoryType"><el-select v-model="form.memoryType" :disabled="!!form.id" class="w100"><el-option label="对话记忆" value="CONVERSATION" /><el-option label="人物记忆" value="PERSON" /><el-option label="知识记忆" value="KNOWLEDGE" /></el-select></el-form-item>
-				<el-form-item label="范围" prop="scopeType"><el-radio-group v-model="form.scopeType" :disabled="!!form.id"><el-radio value="GROUP">群级</el-radio><el-radio value="GLOBAL" :disabled="form.memoryType!=='KNOWLEDGE'">全局</el-radio></el-radio-group></el-form-item>
-				<el-form-item v-if="form.scopeType==='GROUP'" label="微信群" prop="groupId"><el-select v-model="form.groupId" :disabled="!!form.id" filterable class="w100" @change="loadMembers"><el-option v-for="group in groups" :key="group.id" :label="group.groupName" :value="group.id" /></el-select></el-form-item>
-				<el-form-item v-if="form.memoryType==='PERSON'" label="成员" prop="subjectWxid"><el-select v-model="form.subjectWxid" :disabled="!!form.id" filterable class="w100"><el-option v-for="member in members" :key="member.wxid" :label="member.displayName||member.nickName||member.wxid" :value="member.wxid" /></el-select></el-form-item>
-				<el-form-item label="主题" prop="topicKey"><el-input v-model="form.topicKey" :disabled="!!form.id" maxlength="128" /></el-form-item>
+				<el-form-item label="类型" prop="memoryType"><el-select v-model="form.memoryType" class="w100" @change="changeMemoryType"><el-option label="对话记忆" value="CONVERSATION" /><el-option label="人物记忆" value="PERSON" /><el-option label="知识记忆" value="KNOWLEDGE" /></el-select></el-form-item>
+				<el-form-item label="范围" prop="scopeType"><el-radio-group v-model="form.scopeType" @change="changeMemoryScope"><el-radio value="GROUP">群级</el-radio><el-radio value="GLOBAL" :disabled="form.memoryType!=='KNOWLEDGE'">全局</el-radio></el-radio-group></el-form-item>
+				<el-form-item v-if="form.scopeType==='GROUP'" label="微信群" prop="groupId"><el-select v-model="form.groupId" filterable class="w100" @change="changeMemoryGroup"><el-option v-for="group in groups" :key="group.id" :label="group.groupName" :value="group.id" /></el-select></el-form-item>
+				<el-form-item v-if="form.memoryType==='PERSON'" label="成员" prop="subjectWxid"><el-select v-model="form.subjectWxid" filterable class="w100"><el-option v-for="member in members" :key="member.wxid" :label="member.displayName||member.nickName||member.wxid" :value="member.wxid" /></el-select></el-form-item>
+				<el-form-item label="主题" prop="topicKey"><el-input v-model="form.topicKey" maxlength="128" /></el-form-item>
 				<el-form-item label="标签"><el-input v-model="form.tagsText" placeholder="多个标签用逗号分隔" /></el-form-item>
 				<el-form-item label="内容" prop="value"><el-alert v-if="form.id&&form.sensitivity==='SENSITIVE'" title="敏感记录不会回填脱敏值；保存时必须重新输入完整原值" type="warning" :closable="false" class="mb10"/><el-input v-model="form.value" type="textarea" :rows="5" maxlength="1000" show-word-limit /></el-form-item>
-				<el-form-item label="敏感级别" prop="sensitivity"><el-radio-group v-model="form.sensitivity"><el-radio value="NORMAL">普通</el-radio><el-radio value="SENSITIVE">敏感</el-radio></el-radio-group></el-form-item>
+				<el-form-item label="敏感级别" prop="sensitivity"><el-radio-group v-model="form.sensitivity"><el-radio value="NORMAL">普通</el-radio><el-radio value="SENSITIVE" :disabled="form.memoryType!=='PERSON'">敏感</el-radio></el-radio-group></el-form-item>
 				<el-form-item label="操作原因" prop="reason"><el-input v-model="form.reason" type="textarea" :rows="2" maxlength="500" /></el-form-item>
 			</el-form>
 			<template #footer><el-button @click="formVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="save">保存</el-button></template>
@@ -69,6 +69,7 @@ const loading=ref(false),saving=ref(false),formVisible=ref(false),detailVisible=
 const list=ref<any[]>([]),groups=ref<any[]>([]),members=ref<any[]>([]),total=ref(0),detail=reactive<any>({memory:null,revisions:[]});
 const evidenceOptions=[{value:'ADMIN_CONFIRMED',label:'管理员确认'},{value:'SELF_DECLARED',label:'本人说明'},{value:'THIRD_PARTY',label:'他人转述'},{value:'INFERRED',label:'模型推测'}];
 const query=reactive({groupId:'' as number|'',memoryType:'CONVERSATION',scopeType:'',status:'ACTIVE',evidenceKind:'',sensitivity:'',conflict:-1,keyword:'',pageNum:1,pageSize:20});
+let memberRequestSequence=0;
 const emptyForm=()=>({id:0,memoryType:query.memoryType,scopeType:'GROUP',groupId:'' as number|'',subjectWxid:'',topicKey:'',tagsText:'',value:'',sensitivity:'NORMAL',reason:''});
 const form=reactive(emptyForm());
 const rules:FormRules={memoryType:[{required:true,message:'请选择类型',trigger:'change'}],scopeType:[{required:true,message:'请选择范围',trigger:'change'}],groupId:[{required:true,message:'请选择微信群',trigger:'change'}],subjectWxid:[{required:true,message:'请选择成员',trigger:'change'}],topicKey:[{required:true,message:'请输入主题',trigger:'blur'}],value:[{required:true,message:'请输入内容',trigger:'blur'}],sensitivity:[{required:true,message:'请选择敏感级别',trigger:'change'}],reason:[{required:true,message:'请输入操作原因',trigger:'blur'}]};
@@ -79,7 +80,10 @@ const loadList=async()=>{loading.value=true;try{const res:any=await getWechatAIM
 const search=()=>{query.pageNum=1;loadList();};
 const reset=()=>{Object.assign(query,{groupId:'',scopeType:'',status:'ACTIVE',evidenceKind:'',sensitivity:'',conflict:-1,keyword:'',pageNum:1,pageSize:20});loadList();};
 const changeType=()=>{query.pageNum=1;loadList();};
-const loadMembers=async(groupId:number)=>{members.value=[];if(!groupId)return;const res:any=await getWechatRobotGroupMemberList(groupId,false);members.value=res.data.list||res.data||[];};
+const loadMembers=async(groupId:number)=>{const request=++memberRequestSequence;members.value=[];if(!groupId)return;const res:any=await getWechatRobotGroupMemberList(groupId,false);if(request!==memberRequestSequence||Number(form.groupId)!==groupId)return;members.value=res.data.list||res.data||[];};
+const changeMemoryType=()=>{if(form.memoryType!=='PERSON'){form.subjectWxid='';form.sensitivity='NORMAL';}if(form.memoryType!=='KNOWLEDGE'&&form.scopeType==='GLOBAL')form.scopeType='GROUP';if(form.scopeType==='GLOBAL'){form.groupId='';void loadMembers(0);}};
+const changeMemoryScope=()=>{if(form.scopeType==='GLOBAL'){form.groupId='';form.subjectWxid='';void loadMembers(0);}else if(form.groupId)loadMembers(Number(form.groupId));};
+const changeMemoryGroup=async(groupId:number)=>{form.subjectWxid='';await loadMembers(groupId);};
 const openAdd=()=>{Object.assign(form,emptyForm());members.value=[];formVisible.value=true;};
 const openEdit=async(row:any)=>{Object.assign(form,{id:row.id,memoryType:row.memoryType,scopeType:row.scopeType,groupId:row.groupId||'',subjectWxid:row.subjectWxid||'',topicKey:row.topicKey,tagsText:row.tags||'',value:row.sensitivity==='SENSITIVE'?'':row.displayValue,sensitivity:row.sensitivity,reason:''});if(row.groupId)await loadMembers(row.groupId);formVisible.value=true;};
 const payload=()=>({id:form.id||undefined,memoryType:form.memoryType,scopeType:form.scopeType,groupId:form.scopeType==='GROUP'?form.groupId||undefined:undefined,subjectWxid:form.memoryType==='PERSON'?form.subjectWxid:undefined,topicKey:form.topicKey,tags:form.tagsText.split(/[，,|]/).map(v=>v.trim()).filter(Boolean),value:form.value,sensitivity:form.sensitivity,reason:form.reason});
