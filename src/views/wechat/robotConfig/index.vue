@@ -53,7 +53,8 @@
 							</el-descriptions>
 						</template>
 						<template v-else-if="tab.name === 'aiChat'">
-							<div class="panel-heading"><div><h4>小助手聊天</h4><p>只有群成员明确 @ 自动识别的机器人昵称时才会回复。</p></div><el-button v-if="canSaveAIChat" type="primary" :loading="aiChatSaving" @click="saveAIChatForm">保存本页</el-button></div>
+							<div class="panel-heading"><div><h4>小助手聊天</h4><p>精确 @ 机器人始终可用；开启免 @ 连续对话后，也可用昵称唤醒。</p></div><el-button v-if="canSaveAIChat" type="primary" :loading="aiChatSaving" @click="saveAIChatForm">保存本页</el-button></div>
+							<p v-if="aiChatConfig.enabled !== 1" class="form-tip">小助手聊天关闭时，免 @ 连续对话不可用。</p>
 							<el-alert v-if="!aiChatConfig.configurationReady" title="模型配置尚未就绪，只能保持关闭" type="warning" show-icon :closable="false" class="mb15" />
 							<el-alert v-else-if="!aiChatConfig.robotGroupNickname" title="机器人触发昵称正在自动识别，开启后会在识别成功时自动生效" type="info" show-icon :closable="false" class="mb15" />
 							<el-form label-width="150px"><el-form-item label="机器人触发昵称"><span>{{aiChatConfig.robotGroupNickname||'自动识别中'}}</span></el-form-item><el-form-item label="小助手聊天"><el-switch v-model="aiChatConfig.enabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.enabled!==1&&!aiChatConfig.configurationReady"/><span class="form-tip">默认关闭；现有命令不受影响</span></el-form-item><el-form-item label="免 @ 连续对话"><el-switch v-model="aiChatConfig.followupEnabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.enabled !== 1"/><span class="form-tip">喊一次机器人昵称后，同一成员可在 2 分钟内免 @ 追问，最多 5 次；其他成员发言会结束会话。</span></el-form-item><el-form-item label="自动记忆"><el-switch v-model="aiChatConfig.memoryEnabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.memoryEnabled!==1&&!aiChatConfig.memoryConfigurationReady"/><span class="form-tip">学习本群全部文本；不主动回复</span></el-form-item><el-form-item label="业务查询"><el-switch v-model="aiChatConfig.businessQueryEnabled" :active-value="1" :inactive-value="0" :disabled="aiChatConfig.enabled!==1"/><span class="form-tip">只读查询，不执行设置或修改</span></el-form-item><el-form-item label="业务查询权限"><el-radio-group v-model="aiChatConfig.businessAccess" :disabled="aiChatConfig.businessQueryEnabled!==1"><el-radio value="OPERATORS_ONLY">仅运维白名单</el-radio><el-radio value="ALL_MEMBERS">群内所有成员</el-radio></el-radio-group><span class="form-tip">“群内所有成员”仅用于管理群，不开放敏感数据</span></el-form-item></el-form>
@@ -195,7 +196,7 @@ const aiChatSaving=ref(false);const aiChatConfig=reactive<WechatRobotGroupAIChat
 const mobileMedia = window.matchMedia('(max-width: 768px)');
 const tabs = [
 	{ name: 'basic', label: '基础信息', description: '群、厅号、绑定机器人和启停状态。' },
-	...(canReadAIChat ? [{ name: 'aiChat', label: '小助手聊天', description: '明确 @ 机器人时进行自然语言聊天。' }] : []),
+	...(canReadAIChat ? [{ name: 'aiChat', label: '小助手聊天', description: '精确 @ 聊天，可开启昵称唤醒与连续追问。' }] : []),
 	...(canReadCurrentQueue ? [{ name: 'current', label: '当前麦序', description: '当前小时主持与 P1-P8 麦位。' }] : []),
 	{ name: 'queue', label: '麦序规则', description: '扣排、手速、置顶、取排和 P8 规则。' },
 	{ name: 'timing', label: '定时排档', description: '麦序生命周期分钟、启用排档时段和 P8 购买时间。' },
