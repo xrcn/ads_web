@@ -6,7 +6,7 @@
 					<h3>微信群机器人配置</h3>
 					<p>所有设置按微信群隔离，每个分类独立保存。</p>
 				</div>
-				<div class="header-actions"><el-button v-if="overview" @click="openSettingsPreview">预览查询设置</el-button><el-select v-model="selectedGroupId" filterable placeholder="请选择微信群" style="width: 320px" @change="loadOverview"><el-option v-for="group in groupOptions" :key="group.id" :label="groupOptionLabel(group)" :value="group.id" /></el-select></div>
+				<div class="header-actions"><el-button v-if="overview" @click="openSettingsPreview">预览查询设置</el-button><el-select v-model="selectedGroupId" filterable placeholder="请选择微信群" style="width: 320px"><el-option v-for="group in groupOptions" :key="group.id" :label="groupOptionLabel(group)" :value="group.id" /></el-select></div>
 			</div>
 
 			<el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="mb15" />
@@ -34,7 +34,10 @@
 					<el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
 						<template v-if="tab.name === 'basic'">
 							<div class="panel-heading">
-								<div><h4>基础信息</h4><p>本阶段仅展示数据库真实状态，不提供修改。</p></div>
+								<div><h4>基础信息</h4><p>查看群状态，并由授权管理员设置或追加服务期。</p></div>
+								<el-tooltip v-if="canSaveServicePeriod" :disabled="overview.groupStatus === 1" content="请先启用微信群">
+									<span><el-button type="primary" :disabled="overview.groupStatus !== 1" @click="openServicePeriodDialog">管理服务期</el-button></span>
+								</el-tooltip>
 							</div>
 							<el-descriptions :column="tabPosition === 'top' ? 1 : 2" border>
 								<el-descriptions-item label="微信群名称">{{ overview.groupName || '-' }}</el-descriptions-item>
@@ -146,6 +149,28 @@
 		</el-card>
 		<el-result v-else icon="warning" title="没有权限" sub-title="当前账号没有查看机器人配置权限" />
 		<el-dialog v-model="settingsPreviewDialog" title="查询设置预览" width="720px"><pre class="settings-preview">{{overview?.settingsPreview}}</pre></el-dialog>
+		<el-dialog v-model="servicePeriodDialog" title="管理服务期" width="520px" :close-on-click-modal="false">
+			<el-descriptions :column="1" border class="mb15">
+				<el-descriptions-item label="当前开始">{{ overview?.serviceStartedAt || '未设置' }}</el-descriptions-item>
+				<el-descriptions-item label="当前结束">{{ overview?.serviceExpiresAt || '未设置' }}</el-descriptions-item>
+				<el-descriptions-item label="当前剩余">{{ servicePeriodValue(overview) }}</el-descriptions-item>
+				<el-descriptions-item label="排档状态">{{ overview?.runningStatus === 1 ? '运行中' : '已停止' }}</el-descriptions-item>
+			</el-descriptions>
+			<el-form label-width="90px">
+				<el-form-item label="操作方式">
+					<el-radio-group v-model="servicePeriodForm.mode">
+						<el-radio value="SET">设置</el-radio>
+						<el-radio value="ADD">追加</el-radio>
+					</el-radio-group>
+				</el-form-item>
+				<el-form-item label="运行天数">
+					<el-input-number v-model="servicePeriodForm.days" :min="servicePeriodMinDays" :max="36500" :step="1" :precision="0" />
+				</el-form-item>
+				<p v-if="servicePeriodForm.mode === 'SET'" class="form-tip">设置会覆盖当前服务期；0 天表示有效至今天 23:59:59。</p>
+				<p v-else class="form-tip">追加会从当前有效期结束时间继续计算；未设置或已到期时从现在开始。</p>
+			</el-form>
+			<template #footer><el-button @click="servicePeriodDialog=false">取消</el-button><el-button type="primary" :loading="servicePeriodSaving" @click="saveServicePeriod">确认</el-button></template>
+		</el-dialog>
 		<el-dialog v-model="planDialog" title="编辑小时排班" width="620px"><el-form label-width="105px"><el-form-item label="时段">{{planForm.hour}}-{{planForm.hour+1}}</el-form-item><el-form-item label="固定成员"><el-select v-model="planFixedWxids" multiple filterable style="width:100%"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="主持"><el-select v-model="planHostWxid" clearable style="width:100%"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item></el-form><template #footer><el-button @click="planDialog=false">取消</el-button><el-button type="primary" @click="savePlanRow">保存</el-button></template></el-dialog>
 		<el-dialog v-model="batchDialog" title="批量设置排班" width="620px"><el-form label-width="105px"><el-form-item label="目标小时"><el-select v-model="batchHours" multiple style="width:100%"><el-option v-for="h in allHours" :key="h" :label="`${h}-${h+1}`" :value="h"/></el-select></el-form-item><el-form-item label="固定成员"><el-select v-model="batchFixedWxids" multiple filterable style="width:100%"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="主持"><el-select v-model="batchHostWxid" clearable style="width:100%"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select></el-form-item><el-form-item label="清空模式"><el-select v-model="clearMode"><el-option label="仅清固定" value="FIXED_ONLY"/><el-option label="仅清主持" value="HOST_ONLY"/><el-option label="全部清空" value="ALL"/></el-select></el-form-item></el-form><template #footer><el-button type="danger" @click="clearBatchPlan">批量清空</el-button><el-button type="primary" @click="saveBatchPlan">批量覆盖</el-button></template></el-dialog>
 		<el-drawer v-model="exceptionDrawer" title="当天例外" size="560px"><el-date-picker v-model="exceptionDate" value-format="YYYY-MM-DD" @change="loadExceptions"/><div class="exception-form"><el-input-number v-model="exceptionHour" :min="0" :max="23"/><el-select v-model="exceptionMemberWxid" filterable placeholder="固定成员"><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select><el-button @click="saveFixedVoid">作废固定</el-button><el-select v-model="exceptionHostWxid" clearable placeholder="临时主持"><el-option label="开厅" value="virtual:open"/><el-option v-for="m in schedulePlan.candidates" :key="m.memberWxid" :label="m.memberName" :value="m.memberWxid"/></el-select><el-button @click="saveHostOverride">设置主持</el-button></div><el-table :data="exceptions" border class="mt15"><el-table-column prop="hour" label="小时" width="70"/><el-table-column prop="type" label="类型" width="120"/><el-table-column label="对象"><template #default="{row}">{{row.memberName||row.hostName}}</template></el-table-column><el-table-column label="操作" width="80"><template #default="{row}"><el-button text type="danger" @click="restoreException(row)">恢复</el-button></template></el-table-column></el-table></el-drawer>
@@ -161,7 +186,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
-import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupAIChatConfig, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupAIChatConfig, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand, type WechatRobotGroupAIChatConfig } from '/@/api/wechatRobotGroup';
+import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupAIChatConfig, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupAIChatConfig, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupServicePeriod, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand, type WechatRobotGroupAIChatConfig } from '/@/api/wechatRobotGroup';
 import { auth } from '/@/utils/authFunction';
 import { servicePeriodTagType, servicePeriodText, servicePeriodValue } from '/@/utils/wechatServicePeriod';
 import { getWechatGroupScheduleOverview } from '/@/api/wechatGroupSchedule';
@@ -171,6 +196,7 @@ defineOptions({ name: 'wechatRobotConfig' });
 const route = useRoute();
 const router = useRouter();
 const canViewConfig = auth('api/v1/system/wechatRobotGroup/configOverview');
+const canSaveServicePeriod = auth('api/v1/system/wechatRobotGroup/servicePeriodSave');
 const canReadAIChat = auth('api/v1/system/wechatRobotGroup/aiChatConfig');
 const canSaveAIChat = auth('api/v1/system/wechatRobotGroup/aiChatConfigSave');
 const loading = ref(false);
@@ -179,6 +205,12 @@ const selectedGroupId = ref<number>();
 const groupOptions = ref<any[]>([]);
 const overview = ref<any>();
 const settingsPreviewDialog = ref(false);
+const servicePeriodDialog = ref(false);
+const servicePeriodSaving = ref(false);
+const servicePeriodForm = reactive<{ mode: 'SET' | 'ADD'; days: number | undefined }>({ mode: 'SET', days: 30 });
+const servicePeriodMinDays = computed(() => servicePeriodForm.mode === 'ADD' ? 1 : 0);
+let servicePeriodRequestGeneration = 0;
+let overviewRequestGeneration = 0;
 const activeTab = ref('basic');
 const tabPosition = ref<'left' | 'top'>('left');
 const queueSaving=ref(false);const specialStatus=ref('AVAILABLE');const specialList=ref<any[]>([]);const specialCandidates=ref<any[]>([]);const grantMemberWxid=ref('');
@@ -220,16 +252,57 @@ const groupOptionLabel = (group: any) => `${group.groupName}${group.hallNo ? `�
 
 const loadOverview = async () => {
 	if (!selectedGroupId.value || !canViewConfig) return;
+	const groupId = selectedGroupId.value;
+	const requestGeneration = ++overviewRequestGeneration;
 	loading.value = true;
 	errorMessage.value = '';
 	try {
-		const res: any = await getWechatRobotGroupConfigOverview(selectedGroupId.value);
+		const res: any = await getWechatRobotGroupConfigOverview(groupId);
+		if (requestGeneration !== overviewRequestGeneration || selectedGroupId.value !== groupId) return;
 		overview.value = res.data;
 	} catch (error: any) {
+		if (requestGeneration !== overviewRequestGeneration || selectedGroupId.value !== groupId) return;
 		overview.value = undefined;
 		errorMessage.value = error?.message || '机器人配置加载失败';
 	} finally {
-		loading.value = false;
+		if (requestGeneration === overviewRequestGeneration) loading.value = false;
+	}
+};
+
+const openServicePeriodDialog = () => {
+	servicePeriodForm.mode = overview.value?.serviceStatus === 'ACTIVE' ? 'ADD' : 'SET';
+	servicePeriodForm.days = servicePeriodForm.mode === 'ADD' ? 1 : 30;
+	servicePeriodDialog.value = true;
+};
+
+const saveServicePeriod = async () => {
+	const groupId = selectedGroupId.value;
+	if (!groupId) return;
+	if (typeof servicePeriodForm.days !== 'number' || !Number.isInteger(servicePeriodForm.days) || servicePeriodForm.days < servicePeriodMinDays.value || servicePeriodForm.days > 36500) {
+		ElMessage.error(servicePeriodForm.mode === 'ADD' ? '追加天数必须是1到36500的整数' : '运行天数必须是0到36500的整数');
+		return;
+	}
+	const days = servicePeriodForm.days;
+	if (servicePeriodForm.mode === 'SET') {
+		try {
+			await ElMessageBox.confirm('设置会覆盖当前服务期，确认继续？', '管理服务期', { type: 'warning' });
+		} catch {
+			return;
+		}
+	}
+	const generation = ++servicePeriodRequestGeneration;
+	servicePeriodSaving.value = true;
+	try {
+		const res = await saveWechatRobotGroupServicePeriod({ groupId, mode: servicePeriodForm.mode, days });
+		if (generation !== servicePeriodRequestGeneration || selectedGroupId.value !== groupId) return;
+		servicePeriodDialog.value = false;
+		await loadOverview();
+		if (generation !== servicePeriodRequestGeneration || selectedGroupId.value !== groupId) return;
+		const missing = res.data.openingMissing || [];
+		const runningText = res.data.runningStatus === 1 ? '排档运行中' : '排档保持停止';
+		ElMessage.success(missing.length ? `服务期已开始计时，排档未启动：${missing.join('；')}` : `服务期已保存，结束时间：${res.data.serviceExpiresAt}；${runningText}`);
+	} finally {
+		if (generation === servicePeriodRequestGeneration) servicePeriodSaving.value = false;
 	}
 };
 
@@ -247,9 +320,6 @@ const loadGroups = async () => {
 		const requestedGroupId = Number(route.query.groupId || 0);
 		const requestedExists = groupOptions.value.some((group: any) => group.id === requestedGroupId);
 		selectedGroupId.value = requestedExists ? requestedGroupId : groupOptions.value[0]?.id;
-		if (selectedGroupId.value) {
-			await loadOverview();
-		}
 	} catch (error: any) {
 		errorMessage.value = error?.message || '微信群列表加载失败';
 	} finally {
@@ -279,7 +349,34 @@ const loadReminderConfig=async()=>{if(!selectedGroupId.value||!canReadReminders)
 const openPermissionAudit=async()=>{const res:any=await getWechatRobotGroupPermissionReminderAudit(selectedGroupId.value!);permissionAudits.value=res.data.list||[];permissionAuditDrawer.value=true;};
 const loadPermissionSubTab=()=>{if(permissionSubTab.value==='admins'){loadSpecialTop();loadPermissionAdmins();}if(permissionSubTab.value==='reminders')loadReminderConfig();};
 const loadPermissionTab=()=>{loadTiming();loadPermissionSubTab();};
- watch(()=>aiChatConfig.enabled,(value)=>{if(value!==1){aiChatConfig.businessQueryEnabled=0;aiChatConfig.followupEnabled = 0;}});watch(permissionSubTab,loadPermissionSubTab);watch(activeTab,(value)=>{if(value==='aiChat')loadAIChat();if(value==='current')loadCurrentQueue();if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();});watch(selectedGroupId,()=>{aiChatRequestGeneration++;loadedAIChatGroupId.value=undefined;Object.assign(aiChatConfig,{enabled:0, followupEnabled: 0,businessQueryEnabled:0,memoryEnabled:0,businessAccess:'OPERATORS_ONLY',robotGroupNickname:'',configurationReady:false,memoryConfigurationReady:false});currentQueueRequestGeneration++;currentQueue.value=undefined;currentQueueError.value='';currentQueueLoading.value=false;if(activeTab.value==='aiChat')loadAIChat();if(activeTab.value==='current')loadCurrentQueue();if(activeTab.value==='queue')loadQueueTab();if(activeTab.value==='timing')loadTiming();if(activeTab.value==='schedule')loadSchedulePlan();if(activeTab.value==='report')loadReport();if(activeTab.value==='checkin')loadStatistics();if(activeTab.value==='permission')loadPermissionTab();if(activeTab.value==='template')loadTemplateCommands();});
+watch(()=>aiChatConfig.enabled,(value)=>{if(value!==1){aiChatConfig.businessQueryEnabled=0;aiChatConfig.followupEnabled = 0;}});
+watch(permissionSubTab,loadPermissionSubTab);
+watch(activeTab,(value)=>{if(value==='aiChat')loadAIChat();if(value==='current')loadCurrentQueue();if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();});
+watch(selectedGroupId,()=>{
+	overviewRequestGeneration++;
+	overview.value=undefined;
+	errorMessage.value='';
+	servicePeriodRequestGeneration++;
+	servicePeriodDialog.value=false;
+	servicePeriodSaving.value=false;
+	aiChatRequestGeneration++;
+	loadedAIChatGroupId.value=undefined;
+	Object.assign(aiChatConfig,{enabled:0, followupEnabled: 0,businessQueryEnabled:0,memoryEnabled:0,businessAccess:'OPERATORS_ONLY',robotGroupNickname:'',configurationReady:false,memoryConfigurationReady:false});
+	currentQueueRequestGeneration++;
+	currentQueue.value=undefined;
+	currentQueueError.value='';
+	currentQueueLoading.value=false;
+	loadOverview();
+	if(activeTab.value==='aiChat')loadAIChat();
+	if(activeTab.value==='current')loadCurrentQueue();
+	if(activeTab.value==='queue')loadQueueTab();
+	if(activeTab.value==='timing')loadTiming();
+	if(activeTab.value==='schedule')loadSchedulePlan();
+	if(activeTab.value==='report')loadReport();
+	if(activeTab.value==='checkin')loadStatistics();
+	if(activeTab.value==='permission')loadPermissionTab();
+	if(activeTab.value==='template')loadTemplateCommands();
+});
 
 onMounted(() => {
 	syncTabPosition();

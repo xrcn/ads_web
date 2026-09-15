@@ -20,6 +20,20 @@ interface WechatRobotGroupApiResponse<T> {
 
 export type WechatRobotGroupAIChatConfigSave = Pick<WechatRobotGroupAIChatConfig, 'groupId' | 'enabled' | 'followupEnabled' | 'businessQueryEnabled' | 'memoryEnabled' | 'businessAccess'>;
 
+export interface WechatRobotGroupServicePeriodSaveRequest {
+	groupId: number;
+	mode: 'SET' | 'ADD';
+	days: number;
+}
+
+export interface WechatRobotGroupServicePeriodChange {
+	serviceStartedAt: string;
+	serviceExpiresAt: string;
+	serviceRemainingSeconds: number;
+	runningStatus: 0 | 1;
+	openingMissing: string[];
+}
+
 export function getWechatRobotGroupList(query: object) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/list',
@@ -143,6 +157,7 @@ export function getWechatRobotGroupConfigOverview(groupId: number) {
 		params: { groupId },
 	});
 }
+export const saveWechatRobotGroupServicePeriod=(data:WechatRobotGroupServicePeriodSaveRequest)=>request({url:'/api/v1/system/wechatRobotGroup/servicePeriodSave',method:'put',data}) as unknown as Promise<WechatRobotGroupApiResponse<WechatRobotGroupServicePeriodChange>>;
 export const getWechatRobotGroupAIChatConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfig',method:'get',params:{groupId}}) as unknown as Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>;
 export const saveWechatRobotGroupAIChatConfig=(data:WechatRobotGroupAIChatConfigSave)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfigSave',method:'put',data}) as unknown as Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>;
 export const getWechatRobotGroupQueueRules=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/queueRules',method:'get',params:{groupId}});
