@@ -41,7 +41,7 @@
 				<el-table-column prop="groupName" label="微信群" min-width="150" show-overflow-tooltip>
 					<template #default="{ row }">{{ row.groupName || row.groupWxid }}</template>
 				</el-table-column>
-				<el-table-column prop="senderWxid" label="发送者wxid" min-width="150" show-overflow-tooltip />
+				<el-table-column prop="senderName" label="发送者昵称" min-width="150" show-overflow-tooltip />
 				<el-table-column prop="content" label="消息内容" min-width="180" show-overflow-tooltip />
 				<el-table-column prop="commandName" label="命令" width="130">
 					<template #default="{ row }">{{ commandLabel(row.commandName) }}</template>
