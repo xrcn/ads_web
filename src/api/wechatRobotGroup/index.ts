@@ -12,6 +12,14 @@ export interface WechatRobotGroupAIChatConfig {
 	memoryConfigurationReady: boolean;
 }
 
+interface WechatRobotGroupApiResponse<T> {
+	code: number;
+	message: string;
+	data: T;
+}
+
+export type WechatRobotGroupAIChatConfigSave = Pick<WechatRobotGroupAIChatConfig, 'groupId' | 'enabled' | 'followupEnabled' | 'businessQueryEnabled' | 'memoryEnabled' | 'businessAccess'>;
+
 export function getWechatRobotGroupList(query: object) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/list',
@@ -135,8 +143,8 @@ export function getWechatRobotGroupConfigOverview(groupId: number) {
 		params: { groupId },
 	});
 }
-export const getWechatRobotGroupAIChatConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfig',method:'get',params:{groupId}});
-export const saveWechatRobotGroupAIChatConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfigSave',method:'put',data});
+export const getWechatRobotGroupAIChatConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfig',method:'get',params:{groupId}}) as unknown as Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>;
+export const saveWechatRobotGroupAIChatConfig=(data:WechatRobotGroupAIChatConfigSave)=>request({url:'/api/v1/system/wechatRobotGroup/aiChatConfigSave',method:'put',data}) as unknown as Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>;
 export const getWechatRobotGroupQueueRules=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/queueRules',method:'get',params:{groupId}});
 export const saveWechatRobotGroupQueueRules=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/queueRulesSave',method:'put',data});
 export const getWechatRobotGroupSpecialTopList=(groupId:number,status:string)=>request({url:'/api/v1/system/wechatRobotGroup/specialTopList',method:'get',params:{groupId,status}});

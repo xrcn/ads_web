@@ -4,6 +4,10 @@ const api = fs.readFileSync(new URL('../src/api/wechatRobotGroup/index.ts', impo
 const config = fs.readFileSync(new URL('../src/views/wechat/robotConfig/index.vue', import.meta.url), 'utf8');
 const messages = fs.readFileSync(new URL('../src/views/wechat/message/index.vue', import.meta.url), 'utf8');
 
+const assertMatch = (source, pattern, description) => {
+	if (!pattern.test(source)) throw new Error(`missing anchored contract ${description}`);
+};
+
 for (const expected of [
 	'/api/v1/system/wechatRobotGroup/aiChatConfig',
 	'/api/v1/system/wechatRobotGroup/aiChatConfigSave',
@@ -12,6 +16,8 @@ for (const expected of [
 ]) {
 	if (!api.includes(expected)) throw new Error(`missing API ${expected}`);
 }
+assertMatch(api, /export const getWechatRobotGroupAIChatConfig\s*=\s*\(groupId\s*:\s*number\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat get response');
+assertMatch(api, /export const saveWechatRobotGroupAIChatConfig\s*=\s*\(data\s*:\s*WechatRobotGroupAIChatConfigSave\)[\s\S]*?Promise<WechatRobotGroupApiResponse<WechatRobotGroupAIChatConfig>>/, 'typed AI chat save payload and response');
 for (const expected of [
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfig')",
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfigSave')",
@@ -35,6 +41,13 @@ for (const expected of [
 ]) {
 	if (!config.includes(expected)) throw new Error(`missing robot config contract ${expected}`);
 }
+const loadAIChatBlock = config.match(/const loadAIChat[\s\S]*?(?=\r?\nconst saveAIChatForm)/)?.[0] || '';
+assertMatch(loadAIChatBlock, /const loadedConfig\s*=\s*\{\s*\.\.\.res\.data\s*\};[\s\S]*?if\s*\(\s*loadedConfig\.enabled\s*!==\s*1\s*\)\s*\{[\s\S]*?loadedConfig\.businessQueryEnabled\s*=\s*0;[\s\S]*?loadedConfig\.followupEnabled\s*=\s*0;[\s\S]*?\}[\s\S]*?Object\.assign\(aiChatConfig,\s*loadedConfig\)/, 'AI chat load normalization');
+assertMatch(config, /watch\(selectedGroupId,[\s\S]*?Object\.assign\(aiChatConfig,\s*\{[\s\S]*?followupEnabled\s*:\s*0[\s\S]*?\}\)/, 'group switch followup reset');
+const enabledWatchBlock = config.match(/watch\(\(\)=>aiChatConfig\.enabled,[\s\S]*?(?=watch\(permissionSubTab)/)?.[0] || '';
+assertMatch(enabledWatchBlock, /if\s*\(\s*value\s*!==\s*1\s*\)\s*\{[\s\S]*?aiChatConfig\.businessQueryEnabled\s*=\s*0;[\s\S]*?aiChatConfig\.followupEnabled\s*=\s*0;[\s\S]*?\}/, 'AI chat disabled normalization');
+const saveAIChatBlock = config.match(/const saveAIChatForm[\s\S]*?(?=\r?\n\r?\nconst loadQueueRules)/)?.[0] || '';
+assertMatch(saveAIChatBlock, /saveWechatRobotGroupAIChatConfig\(\{\s*groupId\s*,\s*enabled\s*,\s*followupEnabled\s*,\s*businessQueryEnabled/, 'AI chat save followup payload');
 for (const expected of ["AI_CHAT: 'AI聊天'", 'processingMilliseconds', '处理耗时', 'canViewAIChat']) {
 	if (!messages.includes(expected)) throw new Error(`missing message audit contract ${expected}`);
 }
