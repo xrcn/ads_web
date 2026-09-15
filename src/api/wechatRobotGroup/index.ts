@@ -1,5 +1,17 @@
 import request from '/@/utils/request';
 
+export interface WechatRobotGroupAIChatConfig {
+	groupId: number;
+	enabled: 0 | 1;
+	followupEnabled: 0 | 1;
+	businessQueryEnabled: 0 | 1;
+	memoryEnabled: 0 | 1;
+	businessAccess: 'OPERATORS_ONLY' | 'ALL_MEMBERS';
+	robotGroupNickname: string;
+	configurationReady: boolean;
+	memoryConfigurationReady: boolean;
+}
+
 export function getWechatRobotGroupList(query: object) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/list',

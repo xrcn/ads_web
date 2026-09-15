@@ -7,6 +7,8 @@ const messages = fs.readFileSync(new URL('../src/views/wechat/message/index.vue'
 for (const expected of [
 	'/api/v1/system/wechatRobotGroup/aiChatConfig',
 	'/api/v1/system/wechatRobotGroup/aiChatConfigSave',
+	'export interface WechatRobotGroupAIChatConfig',
+	'followupEnabled: 0 | 1',
 ]) {
 	if (!api.includes(expected)) throw new Error(`missing API ${expected}`);
 }
@@ -22,6 +24,14 @@ for (const expected of [
 	':disabled="aiChatConfig.enabled!==1&&!aiChatConfig.configurationReady"',
 	'if(aiChatConfig.enabled===1&&!aiChatConfig.configurationReady)',
 	'自动识别中',
+	'followupEnabled: 0',
+	'v-model="aiChatConfig.followupEnabled"',
+	':disabled="aiChatConfig.enabled !== 1"',
+	'const followupEnabled=',
+	'saveWechatRobotGroupAIChatConfig({groupId,enabled,followupEnabled',
+	'aiChatConfig.followupEnabled = 0',
+	'免 @ 连续对话',
+	'喊一次机器人昵称后，同一成员可在 2 分钟内免 @ 追问，最多 5 次；其他成员发言会结束会话。',
 ]) {
 	if (!config.includes(expected)) throw new Error(`missing robot config contract ${expected}`);
 }
