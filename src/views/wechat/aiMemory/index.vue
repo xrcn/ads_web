@@ -41,7 +41,7 @@
 				<el-form-item v-if="form.memoryType==='PERSON'" label="成员" prop="subjectWxid"><el-select v-model="form.subjectWxid" :disabled="!!form.id" filterable class="w100"><el-option v-for="member in members" :key="member.wxid" :label="member.displayName||member.nickName||member.wxid" :value="member.wxid" /></el-select></el-form-item>
 				<el-form-item label="主题" prop="topicKey"><el-input v-model="form.topicKey" :disabled="!!form.id" maxlength="128" /></el-form-item>
 				<el-form-item label="标签"><el-input v-model="form.tagsText" placeholder="多个标签用逗号分隔" /></el-form-item>
-				<el-form-item label="内容" prop="value"><el-input v-model="form.value" type="textarea" :rows="5" maxlength="1000" show-word-limit /></el-form-item>
+				<el-form-item label="内容" prop="value"><el-alert v-if="form.id&&form.sensitivity==='SENSITIVE'" title="敏感记录不会回填脱敏值；保存时必须重新输入完整原值" type="warning" :closable="false" class="mb10"/><el-input v-model="form.value" type="textarea" :rows="5" maxlength="1000" show-word-limit /></el-form-item>
 				<el-form-item label="敏感级别" prop="sensitivity"><el-radio-group v-model="form.sensitivity"><el-radio value="NORMAL">普通</el-radio><el-radio value="SENSITIVE">敏感</el-radio></el-radio-group></el-form-item>
 				<el-form-item label="操作原因" prop="reason"><el-input v-model="form.reason" type="textarea" :rows="2" maxlength="500" /></el-form-item>
 			</el-form>
@@ -51,7 +51,7 @@
 		<el-drawer v-model="detailVisible" title="AI记忆详情" size="620px">
 			<el-descriptions v-if="detail.memory" :column="1" border><el-descriptions-item label="主题">{{detail.memory.topicKey}}</el-descriptions-item><el-descriptions-item label="内容">{{detail.memory.displayValue}}</el-descriptions-item><el-descriptions-item label="来源摘录">{{detail.memory.sourceExcerpt||'敏感来源已加密'}}</el-descriptions-item><el-descriptions-item label="可信度">{{evidenceLabel(detail.memory.evidenceKind)}}</el-descriptions-item></el-descriptions>
 			<el-divider>版本与访问审计</el-divider>
-			<el-table :data="detail.revisions||[]" border size="small"><el-table-column prop="action" label="动作" width="120" /><el-table-column prop="reason" label="原因" min-width="130" show-overflow-tooltip /><el-table-column prop="actorType" label="来源" width="90" /><el-table-column prop="createdAt" label="时间" width="170" /></el-table>
+			<el-table :data="detail.revisions||[]" border size="small"><el-table-column prop="action" label="动作" width="120" /><el-table-column prop="reason" label="原因" min-width="130" show-overflow-tooltip /><el-table-column prop="actorType" label="来源" width="90" /><el-table-column prop="createdAt" label="时间" width="170" /><el-table-column v-if="detail.memory?.conflict===1" label="操作" width="90"><template #default="{row}"><el-button v-if="row.afterSnapshot&&row.afterSnapshot!=='{}'" text type="primary" @click="chooseRevision(row)">选用</el-button></template></el-table-column></el-table>
 		</el-drawer>
 	</div>
 </template>
@@ -81,7 +81,7 @@ const reset=()=>{Object.assign(query,{groupId:'',scopeType:'',status:'ACTIVE',ev
 const changeType=()=>{query.pageNum=1;loadList();};
 const loadMembers=async(groupId:number)=>{members.value=[];if(!groupId)return;const res:any=await getWechatRobotGroupMemberList(groupId,false);members.value=res.data.list||res.data||[];};
 const openAdd=()=>{Object.assign(form,emptyForm());members.value=[];formVisible.value=true;};
-const openEdit=async(row:any)=>{Object.assign(form,{id:row.id,memoryType:row.memoryType,scopeType:row.scopeType,groupId:row.groupId||'',subjectWxid:row.subjectWxid||'',topicKey:row.topicKey,tagsText:row.tags||'',value:row.displayValue,sensitivity:row.sensitivity,reason:''});if(row.groupId)await loadMembers(row.groupId);formVisible.value=true;};
+const openEdit=async(row:any)=>{Object.assign(form,{id:row.id,memoryType:row.memoryType,scopeType:row.scopeType,groupId:row.groupId||'',subjectWxid:row.subjectWxid||'',topicKey:row.topicKey,tagsText:row.tags||'',value:row.sensitivity==='SENSITIVE'?'':row.displayValue,sensitivity:row.sensitivity,reason:''});if(row.groupId)await loadMembers(row.groupId);formVisible.value=true;};
 const payload=()=>({id:form.id||undefined,memoryType:form.memoryType,scopeType:form.scopeType,groupId:form.scopeType==='GROUP'?form.groupId||undefined:undefined,subjectWxid:form.memoryType==='PERSON'?form.subjectWxid:undefined,topicKey:form.topicKey,tags:form.tagsText.split(/[，,|]/).map(v=>v.trim()).filter(Boolean),value:form.value,sensitivity:form.sensitivity,reason:form.reason});
 const save=()=>formRef.value?.validate(async valid=>{if(!valid)return;saving.value=true;try{form.id?await editWechatAIMemory(payload() as any):await addWechatAIMemory(payload() as any);ElMessage.success('记忆已保存');formVisible.value=false;loadList();}finally{saving.value=false;}});
 const askReason=(title:string)=>ElMessageBox.prompt('请输入操作原因',title,{inputType:'textarea',inputPattern:/\S+/,inputErrorMessage:'原因不能为空',confirmButtonText:'确认',cancelButtonText:'取消'});
@@ -90,6 +90,7 @@ const toggleStatus=(row:any)=>askReason(row.status==='ACTIVE'?'停用记忆':'�
 const remove=(row:any)=>askReason('删除记忆').then(({value})=>deleteWechatAIMemory({id:row.id,reason:value}).then(()=>{ElMessage.success('记忆已删除');loadList();})).catch(()=>{});
 const promote=(row:any)=>askReason('提升为全局知识').then(({value})=>promoteWechatAIMemory({id:row.id,reason:value}).then(()=>{ElMessage.success('已提升为全局知识');loadList();})).catch(()=>{});
 const resolveConflict=(row:any)=>askReason('确认当前值').then(({value})=>resolveWechatAIMemoryConflict({id:row.id,reason:value}).then(()=>{ElMessage.success('冲突已处理');loadList();})).catch(()=>{});
+const chooseRevision=(revision:any)=>askReason('选用这个冲突版本').then(({value})=>resolveWechatAIMemoryConflict({id:detail.memory.id,revisionId:revision.id,reason:value}).then(()=>{ElMessage.success('已选用该版本');detailVisible.value=false;loadList();})).catch(()=>{});
 const reveal=(row:any)=>askReason('查看敏感原值').then(async({value})=>{const res:any=await revealWechatAIMemory({id:row.id,reason:value});await ElMessageBox.alert(res.data.value,'敏感原值',{confirmButtonText:'关闭',type:'warning'});}).catch(()=>{});
 onMounted(async()=>{const res:any=await getWechatRobotGroupList({pageNum:1,pageSize:1000,status:1});groups.value=res.data.list||[];loadList();});
 </script>
