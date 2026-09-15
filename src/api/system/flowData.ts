@@ -29,7 +29,9 @@ export interface AnchorIncomeSyncInput {
 	endDate?: string;
 }
 
-export type VVSyncType = 'HALL_DATA' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_LIST';
+export type HallSyncScope = 'DAILY' | 'TASK';
+export type HallSplitSyncType = 'HALL_DAILY' | 'HALL_TASK';
+export type VVSyncType = 'HALL_DATA' | 'HALL_DAILY' | 'HALL_TASK' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_LIST';
 
 export interface VVSyncProgress {
 	batchId: number;
@@ -156,8 +158,8 @@ export interface RoomRankQuery {
 	hallId?: number | string;
 }
 
-export const syncFlowData = () => request({ url: '/api/v1/system/flowData/sync', method: 'post', timeout: 180000 });
-export const getFlowDataSummary = () => request({ url: '/api/v1/system/flowData/summary', method: 'get' });
+export const syncFlowData = (scope: HallSyncScope) => request({ url: '/api/v1/system/flowData/sync', method: 'post', data: { scope }, timeout: 180000 });
+export const getFlowDataSummary = (syncType: HallSplitSyncType) => request({ url: '/api/v1/system/flowData/summary', method: 'get', params: { syncType } });
 export const getVVSyncProgress = (syncType: VVSyncType) => request({ url: '/api/v1/system/flowData/progress', method: 'get', params: { syncType } });
 export const getFlowDataDaily = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/daily', method: 'get', params });
 export const getFlowDataTasks = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/tasks', method: 'get', params });

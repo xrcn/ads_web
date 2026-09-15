@@ -1,7 +1,7 @@
 <template>
 	<el-card shadow="hover">
-		<template #header><div class="header"><span class="summary">最近成功同步时间：{{ summary.finishedAt || '-' }}</span><el-button type="warning" :loading="syncing" @click="runSync">同步厅数据</el-button></div></template>
-		<VVSyncProgress sync-type="HALL_DATA" :active="syncing" />
+		<template #header><div class="header"><span class="summary">最近成功同步时间：{{ summary.finishedAt || '-' }}</span><el-button type="warning" :loading="syncing" @click="runSync">同步厅任务</el-button></div></template>
+		<VVSyncProgress sync-type="HALL_TASK" :active="syncing" />
 		<el-form inline>
 			<el-form-item label="任务日期"><el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" /></el-form-item>
 			<el-form-item label="所属厅"><el-select v-model="query.hallId" clearable placeholder="全部厅" style="width: 220px"><el-option v-for="hall in halls" :key="hall.hallId" :label="hall.hallName" :value="hall.hallId" /></el-select></el-form-item>
@@ -37,14 +37,14 @@ const load = async () => {
 		table.loading = false;
 	}
 };
-const loadSummary = async () => Object.assign(summary, (await getFlowDataSummary() as any).data);
+const loadSummary = async () => Object.assign(summary, (await getFlowDataSummary('HALL_TASK') as any).data);
 const search = () => { query.pageNum = 1; void load(); };
 const resetQuery = () => { Object.assign(query, { hallId: '', pageNum: 1, pageSize: 20 }); dateRange.value = null; void load(); };
 const runSync = async () => {
-	await ElMessageBox.confirm('确认同步厅数据？', '同步确认', { type: 'warning' });
+	await ElMessageBox.confirm('确认同步厅任务？', '同步确认', { type: 'warning' });
 	syncing.value = true;
 	try {
-		const response: any = await syncFlowData();
+		const response: any = await syncFlowData('TASK');
 		ElMessage.success(`同步成功：新增 ${response.data.insertedCount}，更新 ${response.data.updatedCount}`);
 		await Promise.all([load(), loadSummary()]);
 	} finally {
