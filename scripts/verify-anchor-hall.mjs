@@ -17,6 +17,8 @@ for (const [source, needle] of [
 	[api, '/anchor/hall/vvScoreSync'],
 	[page, '厅 ID'],
 	[page, '厅名'],
+	[page, '厅马甲'],
+	[page, 'hallBadge'],
 	[page, '厅管'],
 	[page, '厅助理'],
 	[page, '关联微信群'],

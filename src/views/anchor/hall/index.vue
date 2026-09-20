@@ -23,6 +23,7 @@
 					<el-table ref="hallTableRef" v-loading="tableData.loading" :data="tableData.list" border stripe @sort-change="handleSortChange">
 						<el-table-column prop="hallId" label="厅 ID" min-width="100" sortable="custom" />
 						<el-table-column prop="hallName" label="厅名" min-width="130" show-overflow-tooltip sortable="custom" />
+						<el-table-column prop="hallBadge" label="马甲" width="80" align="center"><template #default="{ row }">{{ row.hallBadge || '-' }}</template></el-table-column>
 						<el-table-column prop="hallManager" label="厅管" min-width="110"><template #default="{ row }">{{ row.hallManager || '-' }}</template></el-table-column>
 						<el-table-column prop="hallAssistant" label="厅助理" min-width="110"><template #default="{ row }">{{ row.hallAssistant || '-' }}</template></el-table-column>
 						<el-table-column prop="hallScore" label="健康分" width="100" align="center" sortable="custom"><template #default="{ row }"><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></template></el-table-column>
@@ -36,7 +37,7 @@
 
 				<template #default="{ row }">
 					<div class="mobile-record-card__header"><div><h3 class="mobile-record-card__title">{{ row.hallName }}</h3><p class="mobile-record-card__subtitle">厅 ID {{ row.hallId }}</p></div><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></div>
-					<dl class="mobile-record-card__fields"><div><dt>厅管</dt><dd>{{ row.hallManager || '-' }}</dd></div><div><dt>厅助理</dt><dd>{{ row.hallAssistant || '-' }}</dd></div><div><dt>健康分</dt><dd><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></dd></div><div><dt>关联微信群</dt><dd>{{ hallGroupLabel(row) }}</dd></div></dl>
+					<dl class="mobile-record-card__fields"><div><dt>马甲</dt><dd>{{ row.hallBadge || '-' }}</dd></div><div><dt>厅管</dt><dd>{{ row.hallManager || '-' }}</dd></div><div><dt>厅助理</dt><dd>{{ row.hallAssistant || '-' }}</dd></div><div><dt>健康分</dt><dd><el-button text type="primary" @click="openScoreLogs(row)">{{ row.hallScore ?? '0.00' }}</el-button></dd></div><div><dt>关联微信群</dt><dd>{{ hallGroupLabel(row) }}</dd></div></dl>
 					<details class="mobile-record-card__details"><summary>查看完整信息</summary><dl class="mobile-record-card__fields"><div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div><div><dt>更新时间</dt><dd>{{ row.updatedAt || '-' }}</dd></div></dl></details>
 					<div class="mobile-record-card__actions"><el-button v-auth="'api/v1/system/anchor/hall/edit'" type="primary" @click="openEdit(row)">编辑</el-button></div>
 				</template>
@@ -54,6 +55,7 @@
 				<el-row :gutter="20">
 					<el-col :span="12"><el-form-item label="厅 ID" prop="hallId"><el-input-number v-model="form.hallId" :min="1" :precision="0" :disabled="editing" class="w100" /></el-form-item></el-col>
 					<el-col :span="12"><el-form-item label="厅名" prop="hallName"><el-input v-model="form.hallName" maxlength="100" /></el-form-item></el-col>
+					<el-col :span="12"><el-form-item label="厅马甲"><el-input v-model="form.hallBadge" maxlength="16" placeholder="如 🍁，主播昵称里的厅标识" /></el-form-item></el-col>
 					<el-col :span="12"><el-form-item label="厅管"><el-input v-model="form.hallManager" maxlength="100" /></el-form-item></el-col>
 					<el-col :span="12"><el-form-item label="厅助理"><el-input v-model="form.hallAssistant" maxlength="100" /></el-form-item></el-col>
 					<el-col :span="12"><el-form-item label="关联微信群"><el-select v-model="form.wechatRobotGroupId" clearable filterable placeholder="允许暂不关联" class="w100"><el-option v-for="group in formGroupOptions" :key="group.id" :label="groupLabel(group)" :value="group.id" /></el-select></el-form-item></el-col>
@@ -90,7 +92,7 @@ const scoreDialogVisible=ref(false);const scoreHall=reactive({hallId:0,hallName:
 const groupOptions = ref<any[]>([]);
 const query = reactive({ hallId: '', hallName: '', wechatRobotGroupId: '', status: '' as string | number, sortBy: '', sortOrder: '', pageNum: 1, pageSize: 10 });
 const tableData = reactive({ list: [] as any[], total: 0, loading: false });
-const emptyForm = () => ({ hallId: undefined as number | undefined, hallName: '', hallManager: '', hallAssistant: '', wechatRobotGroupId: '' as string | number, groupName: '', groupWxid: '', status: 1, remark: '' });
+const emptyForm = () => ({ hallId: undefined as number | undefined, hallName: '', hallBadge: '', hallManager: '', hallAssistant: '', wechatRobotGroupId: '' as string | number, groupName: '', groupWxid: '', status: 1, remark: '' });
 const form = reactive(emptyForm());
 const rules: FormRules = {
 	hallId: [{ required: true, message: '厅 ID 不能为空', trigger: 'change' }],
