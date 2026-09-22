@@ -18,6 +18,7 @@ export interface FlowDataPageQuery {
 	pageSize: number;
 	hallId?: number | string;
 	roomId?: string;
+	channelId?: string;
 	anchorId?: string;
 	anchorName?: string;
 	startDate?: string;

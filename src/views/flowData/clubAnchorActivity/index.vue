@@ -19,13 +19,13 @@
 			<el-table-column prop="anchorName" label="主播昵称" min-width="150" />
 			<el-table-column prop="sayHiNum" label="打招呼人数" width="110" />
 			<el-table-column prop="sayHiInfoNum" label="打招呼信息数量" width="135" />
-			<el-table-column prop="userReplyNum" label="用户回复人数(6h)" width="145" />
-			<el-table-column prop="sayHiToStrangerNum" label="向陌生人打招呼人数" width="160" />
+			<el-table-column prop="userReplyNum" label="用户回复招呼人数(6h)" width="155" />
+			<el-table-column prop="sayHiToStrangerNum" label="主播向陌生人打招呼人数" width="175" />
 			<el-table-column prop="strangerReplyNum" label="陌生人回复人数" width="130" />
 			<el-table-column prop="userSayHiNum" label="用户向主播打招呼人数" width="165" />
-			<el-table-column prop="anchorReplyStrangerRate" label="回应陌生人招呼率原始值" width="170" />
-			<el-table-column prop="anchorMomentNum" label="发布动态数" width="110" />
-			<el-table-column prop="anchorFansNum" label="新增粉丝数" width="110" />
+			<el-table-column prop="anchorReplyStrangerRate" label="主播回应陌生人招呼率(6h)" width="190" :formatter="(_, __, value) => value !== '' && value != null ? value + '%' : value" />
+			<el-table-column prop="anchorMomentNum" label="主播发布动态广场动态数" width="175" />
+			<el-table-column prop="anchorFansNum" label="主播新增粉丝数" width="130" />
 			<el-table-column prop="prankNum" label="被整蛊次数" width="110" />
 		</el-table>
 		<pagination v-show="table.total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="table.total" @pagination="load" />
@@ -64,7 +64,7 @@ const syncing = ref(false);
 let autoSyncing = false;
 const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
-const query = reactive({ anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
+const query = reactive({ anchorId: '', anchorName: '', pageNum: 1, pageSize: 10 });
 const table = reactive({ list: [] as any[], total: 0, loading: false });
 
 const load = async () => {
@@ -92,7 +92,7 @@ watch(() => [route.query.startDate, route.query.endDate], () => {
 const loadSummary = async () => Object.assign(summary, (await getClubAnchorActivitySummary() as any).data);
 const search = () => { query.pageNum = 1; void load(); };
 const resetQuery = () => {
-	Object.assign(query, { anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
+	Object.assign(query, { anchorId: '', anchorName: '', pageNum: 1, pageSize: 10 });
 	dateRange.value = defaultDateRange();
 	void load();
 };

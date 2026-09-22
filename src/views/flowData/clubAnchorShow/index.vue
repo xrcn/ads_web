@@ -9,12 +9,14 @@
 		<VVSyncProgress sync-type="CLUB_ANCHOR_SHOW" :active="syncing" :loader="getClubAnchorShowProgress" />
 		<el-form class="filters" inline>
 			<el-form-item label="日期范围"><el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" /></el-form-item>
+			<el-form-item label="频道ID/靓号"><el-input v-model="query.channelId" clearable /></el-form-item>
 			<el-form-item label="主播ID"><el-input v-model="query.anchorId" clearable /></el-form-item>
 			<el-form-item label="主播昵称"><el-input v-model="query.anchorName" clearable /></el-form-item>
 			<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button></el-form-item>
 		</el-form>
 		<el-table v-loading="table.loading" :data="table.list" border stripe>
 			<el-table-column prop="statDate" label="日期" width="110" />
+			<el-table-column prop="rank" label="排名" width="80" :formatter="(_, __, value) => value > 0 ? value : '-'" />
 			<el-table-column prop="anchorId" label="主播ID" width="120" />
 			<el-table-column prop="anchorName" label="主播昵称" min-width="130" />
 			<el-table-column prop="roomId" label="频道ID" width="120" />
@@ -25,6 +27,7 @@
 			<el-table-column prop="sendGiftPersonNum" label="送礼人数" width="110" />
 			<el-table-column prop="healthScore" label="健康分" width="100" />
 		</el-table>
+		<div class="totals">流水合计：{{ table.summary.totalFlow || '0.00' }}元</div>
 		<pagination v-show="table.total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="table.total" @pagination="load" />
 	</el-card>
 </template>
@@ -61,8 +64,8 @@ const syncing = ref(false);
 let autoSyncing = false;
 const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
-const query = reactive({ anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
-const table = reactive({ list: [] as any[], total: 0, loading: false });
+const query = reactive({ channelId: '', anchorId: '', anchorName: '', pageNum: 1, pageSize: 10 });
+const table = reactive({ list: [] as any[], total: 0, loading: false, summary: { totalFlow: '' } });
 
 const load = async () => {
 	table.loading = true;
@@ -71,7 +74,8 @@ const load = async () => {
 		const response: any = await getClubAnchorShowList({ ...query, startDate, endDate });
 		table.list = response.data.list ?? [];
 		table.total = response.data.total ?? 0;
-		if (table.total === 0 && !query.anchorId && !query.anchorName && !syncing.value && !autoSyncing) {
+		Object.assign(table.summary, response.data.summary ?? { totalFlow: '' });
+		if (table.total === 0 && !query.channelId && !query.anchorId && !query.anchorName && !syncing.value && !autoSyncing) {
 			autoSyncing = true;
 			try { await runSync(); } finally { autoSyncing = false; }
 		}
@@ -89,7 +93,7 @@ watch(() => [route.query.startDate, route.query.endDate], () => {
 const loadSummary = async () => Object.assign(summary, (await getClubAnchorShowSummary() as any).data);
 const search = () => { query.pageNum = 1; void load(); };
 const resetQuery = () => {
-	Object.assign(query, { anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
+	Object.assign(query, { channelId: '', anchorId: '', anchorName: '', pageNum: 1, pageSize: 10 });
 	dateRange.value = defaultDateRange();
 	void load();
 };
@@ -113,4 +117,5 @@ onMounted(async () => {
 .header { display: flex; justify-content: flex-end; align-items: center; }
 .summary { margin-right: 16px; color: var(--el-text-color-secondary); }
 .filters :deep(.el-input) { width: 220px; }
+.totals { margin-top: 8px; color: var(--el-color-danger); }
 </style>
