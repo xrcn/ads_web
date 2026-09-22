@@ -31,7 +31,7 @@ export interface AnchorIncomeSyncInput {
 
 export type HallSyncScope = 'DAILY' | 'TASK';
 export type HallSplitSyncType = 'HALL_DAILY' | 'HALL_TASK';
-export type VVSyncType = 'HALL_DATA' | 'HALL_DAILY' | 'HALL_TASK' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_LIST';
+export type VVSyncType = 'HALL_DATA' | 'HALL_DAILY' | 'HALL_TASK' | 'HALL_SCORE' | 'ANCHOR_INCOME' | 'ANCHOR_ACTIVITY' | 'ANCHOR_SHOW' | 'ANCHOR_LIST' | 'CLUB_CHANNEL' | 'CLUB_ANCHOR_SHOW' | 'CLUB_ANCHOR_ACTIVITY';
 
 export interface VVSyncProgress {
 	batchId: number;
@@ -178,7 +178,26 @@ export const getAnchorActivitySummary = () => request({ url: '/api/v1/system/flo
 export const getAnchorActivityList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorActivity/list', method: 'get', params });
 export const getAnchorActivityProgress = () => request({ url: '/api/v1/system/flowData/anchorActivity/progress', method: 'get' });
 export const getAnchorActivityHallOptions = () => request({ url: '/api/v1/system/flowData/anchorActivity/hallOptions', method: 'get' });
+export const syncAnchorShow = () => request({ url: '/api/v1/system/flowData/anchorShow/sync', method: 'post', timeout: 180000 });
+export const getAnchorShowSummary = () => request({ url: '/api/v1/system/flowData/anchorShow/summary', method: 'get' });
+export const getAnchorShowList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorShow/list', method: 'get', params });
+export const getAnchorShowProgress = () => request({ url: '/api/v1/system/flowData/anchorShow/progress', method: 'get' });
 export const getFlowDataHomeOverview = (params: FlowDataHomeOverviewQuery = {}) => request({ url: '/api/v1/system/flowData/homeOverview', method: 'get', params, __skipGlobalErrorMessage: true } as any);
 export const getFlowDataHomeRanking = (params: FlowDataHomeRankingQuery) => request({ url: '/api/v1/system/flowData/homeRanking', method: 'get', params, __skipGlobalErrorMessage: true } as any);
 export const getRoomRanks = (params: RoomRankQuery) => request({ url: '/api/v1/system/flowData/roomRanks', method: 'get', params });
 export const refreshRoomRanks = () => request({ url: '/api/v1/system/flowData/roomRanks/refresh', method: 'post', timeout: 60000 });
+
+export const syncClubChannel = () => request({ url: '/api/v1/system/flowData/clubChannel/sync', method: 'post', timeout: 180000 });
+export const getClubChannelSummary = () => request({ url: '/api/v1/system/flowData/clubChannel/summary', method: 'get' });
+export const getClubChannelList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/clubChannel/list', method: 'get', params });
+export const getClubChannelProgress = () => request({ url: '/api/v1/system/flowData/clubChannel/progress', method: 'get' });
+
+export const syncClubAnchorShow = () => request({ url: '/api/v1/system/flowData/clubAnchorShow/sync', method: 'post', timeout: 180000 });
+export const getClubAnchorShowSummary = () => request({ url: '/api/v1/system/flowData/clubAnchorShow/summary', method: 'get' });
+export const getClubAnchorShowList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/clubAnchorShow/list', method: 'get', params });
+export const getClubAnchorShowProgress = () => request({ url: '/api/v1/system/flowData/clubAnchorShow/progress', method: 'get' });
+
+export const syncClubAnchorActivity = () => request({ url: '/api/v1/system/flowData/clubAnchorActivity/sync', method: 'post', timeout: 180000 });
+export const getClubAnchorActivitySummary = () => request({ url: '/api/v1/system/flowData/clubAnchorActivity/summary', method: 'get' });
+export const getClubAnchorActivityList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/clubAnchorActivity/list', method: 'get', params });
+export const getClubAnchorActivityProgress = () => request({ url: '/api/v1/system/flowData/clubAnchorActivity/progress', method: 'get' });

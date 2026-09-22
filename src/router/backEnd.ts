@@ -145,7 +145,7 @@ export function backEndComponent(routes: any) {
 		if(item.children&&item.children.length>0){
 			item.children.some((ci:any)=>{
 				if(!ci.meta.isHide){
-					item.redirect = ci
+					item.redirect = ci.path
 					return true
 				}
 				return false
