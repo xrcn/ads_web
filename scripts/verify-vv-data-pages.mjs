@@ -3,6 +3,14 @@ import path from 'node:path';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const assertOrdered = (source, needles, label) => {
+	let previous = -1;
+	for (const needle of needles) {
+		const current = source.indexOf(needle);
+		if (current < 0 || current <= previous) throw new Error(`${label} column order mismatch: ${needle}`);
+		previous = current;
+	}
+};
 const api = read('src/api/system/flowData.ts');
 const anchorApi = read('src/api/anchor/index.ts');
 const login = read('src/views/flowData/login/index.vue');
@@ -10,6 +18,8 @@ const income = read('src/views/flowData/anchorIncome/index.vue');
 const daily = read('src/views/flowData/daily/index.vue');
 const tasks = read('src/views/flowData/tasks/index.vue');
 const clubChannel = read('src/views/flowData/clubChannel/index.vue');
+const clubAnchorShow = read('src/views/flowData/clubAnchorShow/index.vue');
+const clubAnchorActivity = read('src/views/flowData/clubAnchorActivity/index.vue');
 const progress = read('src/components/vvSyncProgress/index.vue');
 const hall = read('src/views/anchor/hall/index.vue');
 const anchors = read('src/views/anchor/manage/index.vue');
@@ -95,6 +105,7 @@ for (const [source, needle] of [
 	[tasks, 'prop="hallId"'],
 	[tasks, 'prop="roomId"'],
 	[api, 'roomId?: string'],
+	[api, 'channelId?: string'],
 	[clubChannel, "pageSize: 10"],
 	[clubChannel, 'table.list = response.data.list ?? []'],
 	[clubChannel, 'response.data.summary'],
@@ -104,6 +115,14 @@ for (const [source, needle] of [
 	[clubChannel, 'label="新用户送礼流水"'],
 	[clubChannel, '流水合计：{{ table.summary.totalFlow || \'0.00\' }}元'],
 	[clubChannel, '钻石流水(含福袋)：{{ table.summary.totalLiveDiamond || \'0.00\' }}元'],
+	[clubAnchorShow, 'pageSize: 10'],
+	[clubAnchorShow, 'prop="rank"'],
+	[clubAnchorShow, 'label="频道ID/靓号"'],
+	[clubAnchorShow, "channelId: ''"],
+	[clubAnchorShow, 'response.data.summary'],
+	[clubAnchorShow, '流水合计：{{ table.summary.totalFlow || \'0.00\' }}元'],
+	[clubAnchorActivity, 'pageSize: 10'],
+	[clubAnchorActivity, 'label="主播回应陌生人招呼率(6h)"'],
 	[hall, '健康分'],
 	[hall, 'getFlowDataScoreLogs'],
 	[anchors, '同步主播'],
@@ -126,6 +145,14 @@ for (const [source, needle] of [
 }
 if (/syncVVAnchors[\s\S]*?timeout:\s*180000/.test(anchorApi)) throw new Error('anchor VV sync must use the normal short request timeout');
 if (clubChannel.includes('.sort(')) throw new Error('club channel page must preserve backend source ordering');
+if (clubAnchorShow.includes('.sort(') || clubAnchorActivity.includes('.sort(')) throw new Error('club anchor pages must preserve backend source ordering');
+if (clubAnchorShow.includes('.reduce(') || clubAnchorActivity.includes('.reduce(')) throw new Error('club anchor pages must not aggregate paged rows');
+assertOrdered(clubAnchorShow, ['prop="statDate"', 'prop="rank"', 'prop="anchorId"', 'prop="anchorName"', 'prop="roomId"', 'prop="roomName"', 'prop="cuteNumber"', 'prop="totalFlow"', 'prop="totalTimeStr"', 'prop="sendGiftPersonNum"', 'prop="healthScore"'], 'club anchor show');
+assertOrdered(clubAnchorActivity, ['prop="statDate"', 'prop="anchorId"', 'prop="anchorName"', 'prop="sayHiNum"', 'prop="sayHiInfoNum"', 'prop="userReplyNum"', 'prop="sayHiToStrangerNum"', 'prop="strangerReplyNum"', 'prop="userSayHiNum"', 'prop="anchorReplyStrangerRate"', 'prop="anchorMomentNum"', 'prop="anchorFansNum"', 'prop="prankNum"'], 'club anchor activity');
+for (const forbidden of ['prop="userReplyRate"', 'prop="pkNum"']) {
+	if (clubAnchorActivity.includes(forbidden)) throw new Error(`club anchor activity contains forbidden field: ${forbidden}`);
+}
+if (!clubAnchorActivity.includes("value + '%'")) throw new Error('club anchor activity reply rate must render as a percentage');
 if (anchors.includes('当前 VV 登录状态')) throw new Error('anchor list must not expose VV login status');
 for (const [source, title] of [[income, '主播收益'], [daily, '厅每日流水'], [tasks, '厅任务流水数据']]) {
 	if (source.includes(`<span>${title}</span>`)) throw new Error(`flow data card repeats page title: ${title}`);
