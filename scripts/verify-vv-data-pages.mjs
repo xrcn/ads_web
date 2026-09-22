@@ -9,6 +9,7 @@ const login = read('src/views/flowData/login/index.vue');
 const income = read('src/views/flowData/anchorIncome/index.vue');
 const daily = read('src/views/flowData/daily/index.vue');
 const tasks = read('src/views/flowData/tasks/index.vue');
+const clubChannel = read('src/views/flowData/clubChannel/index.vue');
 const progress = read('src/components/vvSyncProgress/index.vue');
 const hall = read('src/views/anchor/hall/index.vue');
 const anchors = read('src/views/anchor/manage/index.vue');
@@ -93,6 +94,16 @@ for (const [source, needle] of [
 	[tasks, '>重置</el-button>'],
 	[tasks, 'prop="hallId"'],
 	[tasks, 'prop="roomId"'],
+	[api, 'roomId?: string'],
+	[clubChannel, "pageSize: 10"],
+	[clubChannel, 'table.list = response.data.list ?? []'],
+	[clubChannel, 'response.data.summary'],
+	[clubChannel, 'prop="rank" label="排名" width="80" />'],
+	[clubChannel, 'label="进房新用户人数"'],
+	[clubChannel, 'label="新用户送礼人数"'],
+	[clubChannel, 'label="新用户送礼流水"'],
+	[clubChannel, '流水合计：{{ table.summary.totalFlow || \'0.00\' }}元'],
+	[clubChannel, '钻石流水(含福袋)：{{ table.summary.totalLiveDiamond || \'0.00\' }}元'],
 	[hall, '健康分'],
 	[hall, 'getFlowDataScoreLogs'],
 	[anchors, '同步主播'],
@@ -114,6 +125,7 @@ for (const [source, needle] of [
 	if (!source.includes(needle)) throw new Error(`missing VV data page contract: ${needle}`);
 }
 if (/syncVVAnchors[\s\S]*?timeout:\s*180000/.test(anchorApi)) throw new Error('anchor VV sync must use the normal short request timeout');
+if (clubChannel.includes('.sort(')) throw new Error('club channel page must preserve backend source ordering');
 if (anchors.includes('当前 VV 登录状态')) throw new Error('anchor list must not expose VV login status');
 for (const [source, title] of [[income, '主播收益'], [daily, '厅每日流水'], [tasks, '厅任务流水数据']]) {
 	if (source.includes(`<span>${title}</span>`)) throw new Error(`flow data card repeats page title: ${title}`);

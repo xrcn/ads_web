@@ -13,22 +13,26 @@
 			<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button></el-form-item>
 		</el-form>
 		<el-table v-loading="table.loading" :data="table.list" border stripe>
-			<el-table-column prop="roomId" label="频道ID" width="120" />
-			<el-table-column prop="roomName" label="频道昵称" width="140" />
-			<el-table-column prop="cuteNumber" label="靓号ID" width="100" />
 			<el-table-column prop="statDate" label="日期" width="110" />
+			<el-table-column prop="roomName" label="频道昵称" width="180" />
 			<el-table-column prop="rank" label="排名" width="80" />
+			<el-table-column prop="roomId" label="频道ID" width="120" />
+			<el-table-column prop="cuteNumber" label="靓号ID" width="100" />
 			<el-table-column prop="totalFlow" label="流水(元)" width="120" />
 			<el-table-column prop="totalLiveDiamond" label="钻石流水(含福袋)" width="140" />
-			<el-table-column prop="diamondRatio" label="钻石占比" width="100" />
+			<el-table-column prop="flowRate" label="钻石占比" width="100" :formatter="(_, __, val) => val != null && val !== '' ? val + '%' : val" />
 			<el-table-column prop="enterRoomUser" label="进房人数" width="110" />
 			<el-table-column prop="sendGiftPersonNum" label="送礼人数" width="110" />
-			<el-table-column prop="enterRoomNewUser" label="进房新用户" width="120" />
-			<el-table-column prop="roomPayNewUser" label="付费新用户" width="110" />
-			<el-table-column prop="enterRoomNewUser24h" label="24h进房新用户" width="140" />
-			<el-table-column prop="roomPayNewUser24h" label="24h付费新用户" width="140" />
-			<el-table-column prop="newUserTotalFlow24h" label="24h新用户流水" width="130" />
+			<el-table-column prop="enterRoomNewUser" label="新进房用户数" width="120" />
+			<el-table-column prop="roomPayNewUser" label="新进房送礼数" width="120" />
+			<el-table-column prop="enterRoomNewUser24h" label="进房新用户人数" width="140" />
+			<el-table-column prop="roomPayNewUser24h" label="新用户送礼人数" width="140" />
+			<el-table-column prop="newUserTotalFlow24h" label="新用户送礼流水" width="130" />
 		</el-table>
+		<div class="totals">
+			<span>流水合计：{{ table.summary.totalFlow || '0.00' }}元</span>
+			<span>钻石流水(含福袋)：{{ table.summary.totalLiveDiamond || '0.00' }}元</span>
+		</div>
 		<pagination v-show="table.total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="table.total" @pagination="load" />
 	</el-card>
 </template>
@@ -65,8 +69,8 @@ const syncing = ref(false);
 let autoSyncing = false;
 const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
-const query = reactive({ roomId: '', pageNum: 1, pageSize: 20 });
-const table = reactive({ list: [] as any[], total: 0, loading: false });
+const query = reactive({ roomId: '', pageNum: 1, pageSize: 10 });
+const table = reactive({ list: [] as any[], total: 0, loading: false, summary: { totalFlow: '', totalLiveDiamond: '' } });
 
 const load = async () => {
 	table.loading = true;
@@ -75,6 +79,7 @@ const load = async () => {
 		const response: any = await getClubChannelList({ ...query, startDate, endDate });
 		table.list = response.data.list ?? [];
 		table.total = response.data.total ?? 0;
+		Object.assign(table.summary, response.data.summary ?? { totalFlow: '', totalLiveDiamond: '' });
 		if (table.total === 0 && !query.roomId && !syncing.value && !autoSyncing) {
 			autoSyncing = true;
 			try { await runSync(); } finally { autoSyncing = false; }
@@ -93,7 +98,7 @@ watch(() => [route.query.startDate, route.query.endDate], () => {
 const loadSummary = async () => Object.assign(summary, (await getClubChannelSummary() as any).data);
 const search = () => { query.pageNum = 1; void load(); };
 const resetQuery = () => {
-	Object.assign(query, { roomId: '', pageNum: 1, pageSize: 20 });
+	Object.assign(query, { roomId: '', pageNum: 1, pageSize: 10 });
 	dateRange.value = defaultDateRange();
 	void load();
 };
@@ -117,4 +122,5 @@ onMounted(async () => {
 .header { display: flex; justify-content: flex-end; align-items: center; }
 .summary { margin-right: 16px; color: var(--el-text-color-secondary); }
 .filters :deep(.el-input) { width: 220px; }
+.totals { display: flex; gap: 20px; margin-top: 8px; color: var(--el-color-danger); }
 </style>
