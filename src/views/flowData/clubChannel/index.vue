@@ -13,11 +13,14 @@
 			<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="resetQuery">重置</el-button></el-form-item>
 		</el-form>
 		<el-table v-loading="table.loading" :data="table.list" border stripe>
-			<el-table-column prop="statDate" label="日期" width="110" />
 			<el-table-column prop="roomId" label="频道ID" width="120" />
+			<el-table-column prop="roomName" label="频道昵称" width="140" />
+			<el-table-column prop="cuteNumber" label="靓号ID" width="100" />
+			<el-table-column prop="statDate" label="日期" width="110" />
 			<el-table-column prop="rank" label="排名" width="80" />
 			<el-table-column prop="totalFlow" label="流水(元)" width="120" />
-			<el-table-column prop="totalLiveDiamond" label="直播钻石" width="120" />
+			<el-table-column prop="totalLiveDiamond" label="钻石流水(含福袋)" width="140" />
+			<el-table-column prop="diamondRatio" label="钻石占比" width="100" />
 			<el-table-column prop="enterRoomUser" label="进房人数" width="110" />
 			<el-table-column prop="sendGiftPersonNum" label="送礼人数" width="110" />
 			<el-table-column prop="enterRoomNewUser" label="进房新用户" width="120" />
@@ -59,6 +62,7 @@ const routeDateRange = () => {
 };
 
 const syncing = ref(false);
+let autoSyncing = false;
 const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
 const query = reactive({ roomId: '', pageNum: 1, pageSize: 20 });
@@ -71,6 +75,10 @@ const load = async () => {
 		const response: any = await getClubChannelList({ ...query, startDate, endDate });
 		table.list = response.data.list ?? [];
 		table.total = response.data.total ?? 0;
+		if (table.total === 0 && !query.roomId && !syncing.value && !autoSyncing) {
+			autoSyncing = true;
+			try { await runSync(); } finally { autoSyncing = false; }
+		}
 	} finally {
 		table.loading = false;
 	}
@@ -102,9 +110,6 @@ const runSync = async () => {
 
 onMounted(async () => {
 	await Promise.allSettled([load(), loadSummary()]);
-	if (!summary.finishedAt) {
-		void runSync();
-	}
 });
 </script>
 

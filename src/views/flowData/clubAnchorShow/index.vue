@@ -58,6 +58,7 @@ const routeDateRange = () => {
 };
 
 const syncing = ref(false);
+let autoSyncing = false;
 const dateRange = ref<string[] | null>(routeDateRange() ?? defaultDateRange());
 const summary = reactive({ finishedAt: '' });
 const query = reactive({ anchorId: '', anchorName: '', pageNum: 1, pageSize: 20 });
@@ -70,6 +71,10 @@ const load = async () => {
 		const response: any = await getClubAnchorShowList({ ...query, startDate, endDate });
 		table.list = response.data.list ?? [];
 		table.total = response.data.total ?? 0;
+		if (table.total === 0 && !query.anchorId && !query.anchorName && !syncing.value && !autoSyncing) {
+			autoSyncing = true;
+			try { await runSync(); } finally { autoSyncing = false; }
+		}
 	} finally {
 		table.loading = false;
 	}
@@ -101,9 +106,6 @@ const runSync = async () => {
 
 onMounted(async () => {
 	await Promise.allSettled([load(), loadSummary()]);
-	if (!summary.finishedAt) {
-		void runSync();
-	}
 });
 </script>
 
