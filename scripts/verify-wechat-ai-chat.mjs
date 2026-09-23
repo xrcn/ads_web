@@ -25,6 +25,7 @@ for (const expected of [
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfig')",
 	"auth('api/v1/system/wechatRobotGroup/aiChatConfigSave')",
 	"name: 'aiChat'",
+	'小助手功能',
 	'小助手聊天',
 	'configurationReady',
 	'aiChatRequestGeneration',
@@ -40,7 +41,7 @@ for (const expected of [
 	'saveWechatRobotGroupAIChatConfig({groupId,enabled,followupEnabled',
 	'aiChatConfig.followupEnabled = 0',
 	'免 @ 连续对话',
-	'精确 @ 机器人始终可用；开启免 @ 连续对话后，也可用昵称唤醒。',
+	'聊天、业务查询和受控执行操作分别启用；执行操作只接受精确 @。',
 	'小助手聊天关闭时，免 @ 连续对话不可用。',
 	'喊一次机器人昵称后，同一成员可在 2 分钟内免 @ 追问，最多 5 次；其他成员发言会结束会话。',
 ]) {

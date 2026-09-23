@@ -7,6 +7,8 @@ export interface WechatRobotGroupAIChatConfig {
 	businessQueryEnabled: 0 | 1;
 	memoryEnabled: 0 | 1;
 	businessAccess: 'OPERATORS_ONLY' | 'ALL_MEMBERS';
+	assistantActionEnabled: 0 | 1;
+	assistantActionAccess: 'OPERATORS_ONLY' | 'ALL_MEMBERS';
 	robotGroupNickname: string;
 	configurationReady: boolean;
 	memoryConfigurationReady: boolean;
@@ -18,7 +20,7 @@ interface WechatRobotGroupApiResponse<T> {
 	data: T;
 }
 
-export type WechatRobotGroupAIChatConfigSave = Pick<WechatRobotGroupAIChatConfig, 'groupId' | 'enabled' | 'followupEnabled' | 'businessQueryEnabled' | 'memoryEnabled' | 'businessAccess'>;
+export type WechatRobotGroupAIChatConfigSave = Pick<WechatRobotGroupAIChatConfig, 'groupId' | 'enabled' | 'followupEnabled' | 'businessQueryEnabled' | 'memoryEnabled' | 'businessAccess' | 'assistantActionEnabled' | 'assistantActionAccess'>;
 
 export type AnchorCustomQueueMode = 'NORMAL' | 'ANCHOR_CUSTOM';
 

@@ -117,10 +117,10 @@ const loadList = () => {
 const search = () => { query.pageNum = 1; loadList(); };
 const reset = () => { Object.assign(query, { groupId: '', senderWxid: '', commandName: '', status: '', pageNum: 1, pageSize: 10 }); dateRange.value = []; loadList(); };
 const openDetail = (id: number) => getWechatMessageDetail(id).then((res: any) => { detail.value = res.data; detailVisible.value = true; });
-const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序', AI_CHAT: 'AI聊天', AI_BUSINESS_QUERY: '业务查询' }[value] || '-');
+const commandLabel = (value: string) => ({ QUEUE_SELF: '排麦', CURRENT_QUEUE: '当前麦序', AI_CHAT: 'AI聊天', AI_BUSINESS_QUERY: '业务查询', RESIGN_DOUBLE_BAN: '离职双封', APPROVE_ANCHOR_SIGNING: '签约', APPROVE_HALL_CHANGE: '修改所属厅' }[value] || '-');
 const processingTime = (value: number) => value > 0 ? `${(value / 1000).toFixed(value >= 1000 ? 1 : 3)}秒` : '-';
 const statusType = (value: string) => value === 'PROCESSED' ? 'success' : value === 'IGNORED' ? 'info' : value.includes('FAILED') ? 'danger' : 'warning';
-const authoritySourceLabel = (value: string) => ({ GLOBAL_OPERATOR: '全局运维', OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
+const authoritySourceLabel = (value: string) => ({ GLOBAL_OPERATOR: '全局运维', GROUP_ALL_MEMBERS: '群内所有成员', OWNER: '群主', OFFICIAL_ADMIN: '官方管理员', PERMANENT_ADMIN: '永久管理员', MEMBER: '普通成员' }[value] || '-');
 const formatJson = (value: unknown) => {
 	if (value === null || value === undefined || value === '') return '-';
 	try {
