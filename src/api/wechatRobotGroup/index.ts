@@ -20,6 +20,25 @@ interface WechatRobotGroupApiResponse<T> {
 
 export type WechatRobotGroupAIChatConfigSave = Pick<WechatRobotGroupAIChatConfig, 'groupId' | 'enabled' | 'followupEnabled' | 'businessQueryEnabled' | 'memoryEnabled' | 'businessAccess'>;
 
+export type AnchorCustomQueueMode = 'NORMAL' | 'ANCHOR_CUSTOM';
+
+export interface AnchorCustomCommandConfig {
+	groupId: number;
+	queueMode: AnchorCustomQueueMode;
+	bindTimeoutSeconds: number;
+}
+
+export interface AnchorCustomCommandItem {
+	anchorProfileId: number;
+	anchorName: string;
+	isPresent: 0 | 1;
+	bound: boolean;
+	messageType: 0 | 3 | 47;
+	mediaStatus: 'READY' | 'NEEDS_REBIND' | '';
+	updatedAt: string;
+	previewUrl: string;
+}
+
 export interface WechatRobotGroupServicePeriodSaveRequest {
 	groupId: number;
 	mode: 'SET' | 'ADD';
@@ -196,3 +215,8 @@ export const deleteWechatRobotGroupPermanentAdmin=(data:object)=>request({url:'/
 export const getWechatRobotGroupReminderConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfig',method:'get',params:{groupId}});
 export const saveWechatRobotGroupReminderConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfigSave',method:'put',data});
 export const getWechatRobotGroupPermissionReminderAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/permissionReminderAudit',method:'get',params:{groupId}});
+export const getAnchorCustomCommandConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/config',method:'get',params:{groupId}}) as unknown as Promise<WechatRobotGroupApiResponse<AnchorCustomCommandConfig>>;
+export const saveAnchorCustomCommandConfig=(data:AnchorCustomCommandConfig)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/configSave',method:'put',data});
+export const getAnchorCustomCommandList=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/list',method:'get',params:{groupId}}) as unknown as Promise<WechatRobotGroupApiResponse<{list:AnchorCustomCommandItem[]}>>;
+export const deleteAnchorCustomCommand=(data:{groupId:number;anchorId:number})=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/delete',method:'delete',data});
+export const getAnchorCustomCommandPreview=(groupId:number,anchorId:number)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/preview',method:'get',params:{groupId,anchorId}}) as unknown as Promise<WechatRobotGroupApiResponse<{previewUrl:string}>>;
