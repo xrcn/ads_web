@@ -13,13 +13,13 @@
 			<el-form-item v-if="canSave"><el-button type="primary" :loading="saving" @click="saveConfig">保存配置</el-button></el-form-item>
 		</el-form>
 		<el-alert v-if="canRead&&config.queueMode==='NORMAL'" title="普通模式下仅允许切换模式和设置等待时间；专属指令操作不可用。" type="info" :closable="false" class="mb15" />
-		<el-table v-if="canRead" v-loading="loading" :data="items" border stripe empty-text="当前群没有主播档案">
+		<el-table v-if="canRead" v-loading="loading" :data="items" border stripe empty-text="当前群没有成员">
 			<el-table-column prop="anchorName" label="主播" min-width="130" />
 			<el-table-column label="在群状态" width="100"><template #default="{row}"><el-tag :type="row.isPresent===1?'success':'info'">{{row.isPresent===1?'在群':'已离群'}}</el-tag></template></el-table-column>
-			<el-table-column label="绑定状态" width="120"><template #default="{row}"><el-tag :type="row.bound&&row.mediaStatus==='READY'?'success':row.bound?'warning':'info'">{{row.bound?(row.mediaStatus==='READY'?'已绑定':'需重新绑定'):'未绑定'}}</el-tag></template></el-table-column>
+			<el-table-column label="绑定状态" width="120"><template #default="{row}"><el-tag :type="row.bound&&row.isPresent===0?'warning':row.bound&&row.mediaStatus==='READY'?'success':row.bound?'warning':'info'">{{row.bound&&row.isPresent===0?'已暂停':row.bound?(row.mediaStatus==='READY'?'已绑定':'需重新绑定'):'未绑定'}}</el-tag></template></el-table-column>
 			<el-table-column label="专属内容" min-width="170"><template #default="{row}"><el-image v-if="customMode&&row.bound&&row.previewUrl" :src="row.previewUrl" :preview-src-list="[row.previewUrl]" fit="contain" class="media-preview"/><template v-else><span>{{row.messageType===47?'表情':row.messageType===3?'图片':'-'}}</span><el-button v-if="customMode&&canPreview&&row.bound&&row.mediaStatus==='READY'" text type="primary" @click="loadPreview(row)">预览</el-button></template></template></el-table-column>
 			<el-table-column prop="updatedAt" label="更新时间" width="170" />
-			<el-table-column label="操作" width="190"><template #default="{row}"><el-button text type="primary" :disabled="!customMode||!canSave" @click="openCommand(row)">{{row.bound?'修改':'配置'}}</el-button><el-button v-if="row.bound&&canDelete" text type="danger" :disabled="!customMode" @click="remove(row)">删除</el-button></template></el-table-column>
+			<el-table-column label="操作" width="190"><template #default="{row}"><el-button text type="primary" :disabled="!customMode||!canSave||row.isPresent!==1" @click="openCommand(row)">{{row.bound?'修改':'配置'}}</el-button><el-button v-if="row.bound&&canDelete" text type="danger" :disabled="!customMode" @click="remove(row)">删除</el-button></template></el-table-column>
 		</el-table>
 		<el-empty v-else description="没有查看专属扣排配置的权限" />
 		<el-dialog v-model="commandDialog" title="群内配置指引" width="520px">
@@ -47,8 +47,8 @@ const saveConfig=async()=>{if(!props.groupId)return;if(config.queueMode==='ANCHO
 const syncMembers=async()=>{if(!props.groupId)return;syncing.value=true;try{const res:any=await syncWechatRobotGroupMembers(props.groupId);lastSyncAt.value=res.data.lastSuccessfulSyncAt||'';ElMessage.success('群成员已同步');await load();}finally{syncing.value=false;}};
 const openCommand=(row:AnchorCustomCommandItem)=>{commandText.value=`设置${row.anchorName}扣排专属`;commandDialog.value=true;};
 const copyCommand=async()=>{await toClipboard(commandText.value);ElMessage.success('口令已复制');};
-const loadPreview=async(row:AnchorCustomCommandItem)=>{if(!props.groupId)return;const res=await getAnchorCustomCommandPreview(props.groupId,row.anchorProfileId);row.previewUrl=res.data.previewUrl;};
-const remove=async(row:AnchorCustomCommandItem)=>{if(!props.groupId)return;await ElMessageBox.confirm(`确认删除 ${row.anchorName} 的专属扣排指令？`,'删除绑定',{type:'warning'});await deleteAnchorCustomCommand({groupId:props.groupId,anchorId:row.anchorProfileId});ElMessage.success('专属扣排指令已删除');await load();};
+const loadPreview=async(row:AnchorCustomCommandItem)=>{if(!props.groupId||!row.bindingId)return;const res=await getAnchorCustomCommandPreview(props.groupId,row.bindingId);row.previewUrl=res.data.previewUrl;};
+const remove=async(row:AnchorCustomCommandItem)=>{if(!props.groupId||!row.bindingId)return;await ElMessageBox.confirm(`确认删除 ${row.anchorName} 的专属扣排指令？`,'删除绑定',{type:'warning'});await deleteAnchorCustomCommand({groupId:props.groupId,bindingId:row.bindingId});ElMessage.success('专属扣排指令已删除');await load();};
 watch(()=>[props.groupId,props.canRead],load,{immediate:true});
 watch(()=>props.lastSuccessfulSyncAt,(value)=>{lastSyncAt.value=value||'';},{immediate:true});
 </script>
