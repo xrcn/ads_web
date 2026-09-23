@@ -196,3 +196,7 @@ export const deleteWechatRobotGroupPermanentAdmin=(data:object)=>request({url:'/
 export const getWechatRobotGroupReminderConfig=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfig',method:'get',params:{groupId}});
 export const saveWechatRobotGroupReminderConfig=(data:object)=>request({url:'/api/v1/system/wechatRobotGroup/reminderConfigSave',method:'put',data});
 export const getWechatRobotGroupPermissionReminderAudit=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/permissionReminderAudit',method:'get',params:{groupId}});
+export const getAnchorCustomCommandList=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/list',method:'get',params:{groupId}});
+export const deleteAnchorCustomCommand=(data:{groupId:number;anchorId:number})=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/delete',method:'delete',data});
+export const getAnchorCustomCommandQueueMode=(groupId:number)=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/queueMode',method:'get',params:{groupId}});
+export const saveAnchorCustomCommandQueueMode=(data:{groupId:number;queueMode:string})=>request({url:'/api/v1/system/wechatRobotGroup/anchorCustomCommand/queueModeSave',method:'put',data});
