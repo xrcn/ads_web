@@ -112,9 +112,8 @@
 							<div class="panel-heading"><div><h4>打卡统计</h4><p>只控制统计展示，不删除或停止采集考勤与麦序事件。</p></div><div><el-button v-if="canStatisticsAudit" @click="openStatisticsAudit">审计</el-button><el-button v-if="canSaveStatistics" type="primary" :loading="statisticsSaving" @click="saveStatisticsForm">保存本页</el-button></div></div>
 							<el-row v-if="canReadStatistics" :gutter="18"><el-col :xs="24" :lg="14"><el-form :model="statisticsConfig" label-width="150px" :disabled="!canSaveStatistics"><el-form-item label="统计总开关"><el-switch v-model="statisticsConfig.enabled" :active-value="1" :inactive-value="0"/><span class="form-tip">关闭后仍发送 :59 下一档简版，整点静默开档</span></el-form-item><el-divider content-position="left">显示内容</el-divider><el-row :gutter="16"><el-col v-for="field in statisticsFields" :key="field.key" :xs="24" :md="12"><el-form-item :label="field.label"><el-switch v-model="statisticsConfig[field.key]" :active-value="1" :inactive-value="0"/></el-form-item></el-col></el-row></el-form></el-col><el-col :xs="24" :lg="10"><el-card shadow="never" class="statistics-preview"><template #header><strong>效果预览</strong></template><pre>{{statisticsPreview}}</pre></el-card></el-col></el-row><el-empty v-else description="没有查看打卡统计配置的权限"/>
 						</template>
-						<template v-else-if="tab.name === 'queueMode'">
-							<div class="panel-heading"><div><h4>扣排模式</h4><p>当前仅开放普通文本扣排。</p></div></div>
-							<el-descriptions :column="1" border><el-descriptions-item label="当前模式">{{overview.queueMode==='NORMAL'?'普通模式':overview.queueMode}}</el-descriptions-item><el-descriptions-item label="支持口令">p / P / 排 / 补</el-descriptions-item><el-descriptions-item label="状态"><el-tag type="success">已启用</el-tag></el-descriptions-item><el-descriptions-item label="说明">其他扣排模式暂未开放</el-descriptions-item></el-descriptions>
+						<template v-else-if="tab.name === 'anchorCustomCommand'">
+							<AnchorCustomCommandTab :group-id="selectedGroupId" :last-successful-sync-at="overview?.lastSuccessfulMemberSyncAt" :can-read="canReadAnchorCustomCommands" :can-save="canSaveAnchorCustomCommands" :can-delete="canDeleteAnchorCustomCommand" :can-preview="canPreviewAnchorCustomCommand" :can-sync-members="canSyncMembers" />
 						</template>
 						<template v-else-if="tab.name === 'permission'">
 							<div class="panel-heading"><div><h4>权限与提醒</h4><p>管理三来源管理员、任务未过分钟和自动群提醒。</p></div><el-button v-if="canPermissionAudit" @click="openPermissionAudit">审计</el-button></div>
@@ -129,38 +128,6 @@
 							<template v-if="canReadTemplates"><div class="template-toolbar"><el-input v-model="templateKeyword" clearable placeholder="搜索命令名称、key或口令"/><el-select v-model="templateKind"><el-option label="全部类型" value=""/><el-option label="主动命令" value="COMMAND"/><el-option label="自动场景" value="AUTO"/></el-select></div>
 							<el-table v-if="canReadTemplates" :data="filteredTemplateCommands" row-key="commandKey" border stripe class="template-command-table" empty-text="暂无匹配命令"><el-table-column type="expand"><template #default="{row}"><div class="template-command-editor"><div class="template-actions"><el-button v-if="canResetTemplates" type="danger" plain @click="resetTemplateCommand(row)">恢复公共默认</el-button><el-button v-if="canSaveTemplates" type="primary" @click="saveTemplateCommand(row)">保存本命令</el-button></div><el-alert v-if="row.accessMode&&row.accessMode!=='POLICY'" :title="`本人执行权限由系统固定：${commandExecutionAccessLabel(row)}`" type="info" :closable="false" class="mb15"/><el-form label-width="115px" :disabled="!canSaveTemplates"><el-form-item v-if="row.accessMode==='POLICY'&&row.executionMode" label="本人执行"><el-radio-group v-model="row.executionMode"><el-radio-button value="ALL">所有人</el-radio-button><el-radio-button value="ADMIN_ONLY">仅管理员</el-radio-button><el-radio-button value="DISABLED" :disabled="row.commandKey==='START_RUNNING'">完全禁用</el-radio-button></el-radio-group></el-form-item><el-form-item v-if="row.accessMode!=='GLOBAL_ONLY'&&row.delegationMode" label="群内代发策略"><el-radio-group v-model="row.delegationMode"><el-radio-button value="ALL">所有人</el-radio-button><el-radio-button value="ADMIN_ONLY">仅群管理员</el-radio-button><el-radio-button value="DISABLED">禁止群内代发</el-radio-button></el-radio-group></el-form-item><el-form-item v-if="row.delegationMode" label="群私有口令"><el-input v-model="row.aliasInput" type="textarea" :autosize="{ minRows: 1, maxRows: 4 }" placeholder="每行一个；留空继承公共口令"/></el-form-item><el-form-item label="公共口令"><el-tag v-for="alias in row.publicAliases" :key="alias" class="mr5">{{alias}}</el-tag><span v-if="!row.publicAliases.length">无固定口令</span></el-form-item></el-form><el-card v-for="scenario in row.scenarios" :key="scenario.eventKey" shadow="never" class="scenario-card"><template #header><div class="scenario-header"><strong>{{scenario.label}}</strong><el-select v-model="scenario.state" :disabled="!canSaveTemplates" style="width:170px"><el-option label="使用公共默认" value="PUBLIC"/><el-option label="群私有启用" value="GROUP_ENABLED"/><el-option label="当前群禁用" value="GROUP_DISABLED"/></el-select></div></template><el-alert v-if="scenario.state==='PUBLIC'" title="当前使用公共默认" type="info" :closable="false"/><el-input v-else v-model="scenario.groupContent" type="textarea" :autosize="{ minRows: 1, maxRows: 8 }" :disabled="!canSaveTemplates||scenario.state==='GROUP_DISABLED'"/><div class="variable-list"><el-tag v-for="variable in scenario.allowedVariables" :key="variable" size="small">{{variableToken(variable)}}</el-tag></div></el-card></div></template></el-table-column><el-table-column prop="commandName" label="命令名称" min-width="150"/><el-table-column prop="commandUsage" label="直观口令" min-width="220"><template #default="{row}"><span class="multiline-text">{{row.commandUsage||'定时触发'}}</span></template></el-table-column><el-table-column label="本人执行" width="130"><template #default="{row}">{{commandExecutionAccessLabel(row)}}</template></el-table-column><el-table-column label="群内代发策略" width="130"><template #default="{row}">{{commandDelegationLabel(row)}}</template></el-table-column></el-table></template>
 							<el-empty v-else description="没有查看模板与口令的权限"/>
-						</template>
-						<template v-else-if="tab.name === 'anchorCustomCommand'">
-							<div class="panel-heading"><div><h4>专属扣排配置</h4><p>主播可绑定表情或图片作为专属扣排指令，群内发送即扣排。</p></div><el-button :loading="anchorCustomCommandLoading" @click="loadAnchorCustomCommandTab">刷新</el-button></div>
-							<el-form label-width="120px" class="mb15">
-								<el-form-item label="扣排模式">
-									<el-radio-group v-model="anchorCustomCommandQueueMode" :disabled="!canSaveAnchorCustomCommandQueueMode">
-										<el-radio value="NORMAL">普通模式</el-radio>
-										<el-radio value="ANCHOR_CUSTOM">主播专属模式</el-radio>
-									</el-radio-group>
-									<span class="form-tip">主播专属模式下，群内发送绑定的表情/图片即为该主播扣排</span>
-								</el-form-item>
-								<el-form-item v-if="canSaveAnchorCustomCommandQueueMode">
-									<el-button type="primary" @click="saveAnchorCustomQueueMode">保存模式</el-button>
-								</el-form-item>
-							</el-form>
-							<el-divider content-position="left">已绑定指令</el-divider>
-							<template v-if="canReadAnchorCustomCommands">
-								<el-table :data="anchorCustomCommands" border stripe empty-text="暂无绑定的专属扣排指令">
-									<el-table-column prop="anchorName" label="主播" min-width="120" />
-									<el-table-column label="类型" width="100">
-										<template #default="{row}">{{ row.messageType === 3 ? '图片' : row.messageType === 47 ? '表情' : row.messageType }}</template>
-									</el-table-column>
-									<el-table-column prop="md5" label="MD5" min-width="200" show-overflow-tooltip />
-									<el-table-column prop="createdAt" label="绑定时间" width="170" />
-									<el-table-column label="操作" width="100">
-										<template #default="{row}">
-											<el-button v-if="canDeleteAnchorCustomCommand" text type="danger" @click="deleteAnchorCustomCommandItem(row)">删除</el-button>
-										</template>
-									</el-table-column>
-								</el-table>
-							</template>
-							<el-empty v-else description="没有查看专属扣排指令的权限" />
 						</template>
 						<template v-else>
 							<div class="panel-heading"><div><h4>{{ tab.label }}</h4><p>{{ tab.description }}</p></div></div>
@@ -218,10 +185,11 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
-import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupAIChatConfig, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupAIChatConfig, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupServicePeriod, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand, type WechatRobotGroupAIChatConfig, getAnchorCustomCommandList, deleteAnchorCustomCommand, getAnchorCustomCommandQueueMode, saveAnchorCustomCommandQueueMode } from '/@/api/wechatRobotGroup';
+import { batchClearWechatRobotGroupSchedulePlan, batchSaveWechatRobotGroupSchedulePlan, cancelWechatRobotGroupSpecialTop, closeWechatRobotGroupReport, deleteWechatRobotGroupPermanentAdmin, getWechatRobotGroupActiveReports, getWechatRobotGroupAIChatConfig, getWechatRobotGroupConfigOverview, getWechatRobotGroupList, getWechatRobotGroupPermissionAdmins, getWechatRobotGroupPermissionReminderAudit, getWechatRobotGroupQueueRules, getWechatRobotGroupReminderConfig, getWechatRobotGroupReportConfig, getWechatRobotGroupReportConfigAudit, getWechatRobotGroupScheduleExceptions, getWechatRobotGroupSchedulePlan, getWechatRobotGroupSchedulePlanAudit, getWechatRobotGroupScheduleTiming, getWechatRobotGroupSpecialTopList, getWechatRobotGroupStatisticsConfig, getWechatRobotGroupStatisticsConfigAudit, getWechatRobotGroupTemplateCommandAudit, getWechatRobotGroupTemplateCommands, grantWechatRobotGroupSpecialTop, resetWechatRobotGroupTemplateCommand, restoreWechatRobotGroupFixedException, restoreWechatRobotGroupHostException, saveWechatRobotGroupAIChatConfig, saveWechatRobotGroupFixedException, saveWechatRobotGroupHostException, saveWechatRobotGroupPermanentAdmin, saveWechatRobotGroupQueueRules, saveWechatRobotGroupReminderConfig, saveWechatRobotGroupReportConfig, saveWechatRobotGroupSchedulePlan, saveWechatRobotGroupScheduleTiming, saveWechatRobotGroupServicePeriod, saveWechatRobotGroupStatisticsConfig, saveWechatRobotGroupTaskReminderMinutes, saveWechatRobotGroupTemplateCommand, type WechatRobotGroupAIChatConfig } from '/@/api/wechatRobotGroup';
 import { auth } from '/@/utils/authFunction';
 import { servicePeriodTagType, servicePeriodText, servicePeriodValue } from '/@/utils/wechatServicePeriod';
 import { getWechatGroupScheduleOverview } from '/@/api/wechatGroupSchedule';
+import AnchorCustomCommandTab from './components/AnchorCustomCommandTab.vue';
 
 defineOptions({ name: 'wechatRobotConfig' });
 
@@ -255,8 +223,8 @@ const canSavePlan=auth('api/v1/system/wechatRobotGroup/schedulePlanSave');const 
 const canReadReport=auth('api/v1/system/wechatRobotGroup/reportConfig');const canSaveReport=auth('api/v1/system/wechatRobotGroup/reportConfigSave');const canActiveReports=auth('api/v1/system/wechatRobotGroup/activeReports');const canCloseReport=auth('api/v1/system/wechatRobotGroup/reportClose');const canReportAudit=auth('api/v1/system/wechatRobotGroup/reportConfigAudit');const reportSaving=ref(false);const reportConfig=reactive<any>({enabled:1,maxReportCount:1,reportMinutes:15,startText:'',endText:'',slotCount:8,activeCount:0});const activeReports=ref<any[]>([]);const reportAudits=ref<any[]>([]);const reportAuditDrawer=ref(false);
 const canReadStatistics=auth('api/v1/system/wechatRobotGroup/statisticsConfig');const canSaveStatistics=canReadStatistics&&auth('api/v1/system/wechatRobotGroup/statisticsConfigSave');const canStatisticsAudit=auth('api/v1/system/wechatRobotGroup/statisticsConfigAudit');const statisticsSaving=ref(false);const statisticsConfig=reactive<any>({enabled:1,showMemberMinutes:1,showRoundCount:1,showEntryType:1,showHostMinutes:1,showTotalMinutes:1,showDetails:1,showTaskList:1});const statisticsFields=[{key:'showMemberMinutes',label:'主播有效分钟'},{key:'showRoundCount',label:'参与档数'},{key:'showEntryType',label:'进入类型'},{key:'showHostMinutes',label:'主持时长'},{key:'showTotalMinutes',label:'总麦序时长'},{key:'showDetails',label:'详细麦序时间线'},{key:'showTaskList',label:'任务排栏目'}];const statisticsAudits=ref<any[]>([]);const statisticsAuditDrawer=ref(false);
 const canReadTemplates=auth('api/v1/system/wechatRobotGroup/templateCommands');const canSaveTemplates=canReadTemplates&&auth('api/v1/system/wechatRobotGroup/templateCommandSave');const canResetTemplates=canReadTemplates&&auth('api/v1/system/wechatRobotGroup/templateCommandReset');const canTemplateAudit=auth('api/v1/system/wechatRobotGroup/templateCommandAudit');const templateCommands=ref<any[]>([]);const templateKeyword=ref('');const templateKind=ref('');const templateAudits=ref<any[]>([]);const templateAuditDrawer=ref(false);
+const canReadAnchorCustomCommands=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/list')&&auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/config');const canSaveAnchorCustomCommands=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/configSave');const canDeleteAnchorCustomCommand=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/delete');const canPreviewAnchorCustomCommand=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/preview');const canSyncMembers=auth('api/v1/system/wechatRobotGroup/memberSync');
 const canReadAdmins=auth('api/v1/system/wechatRobotGroup/permissionAdmins');const canSavePermanentAdmin=auth('api/v1/system/wechatRobotGroup/permanentAdminSave');const canDeletePermanentAdmin=auth('api/v1/system/wechatRobotGroup/permanentAdminDelete');const canReadReminders=auth('api/v1/system/wechatRobotGroup/reminderConfig');const canSaveReminders=auth('api/v1/system/wechatRobotGroup/reminderConfigSave');const canPermissionAudit=auth('api/v1/system/wechatRobotGroup/permissionReminderAudit');const permissionSubTab=ref(canReadAdmins?'admins':canReadReminders?'reminders':'admins');const permissionAdmins=ref<any[]>([]);const permissionSyncAt=ref('');const permanentAdminWxid=ref('');const reminderConfigs=ref<any[]>([]);const permissionAudits=ref<any[]>([]);const permissionAuditDrawer=ref(false);const reminderLabels:any={AUTO_CURRENT_ROUND_REPORT:':45 定时麦序',AUTO_NEXT_ROUND_REPORT:':59 下一档简版',AUTO_ATTENDANCE_REPORT:':59 累计打卡',GROUP_MEMBER_JOIN:'入群通知',GROUP_MEMBER_LEAVE:'退群通知'};
-const canReadAnchorCustomCommands=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/list');const canDeleteAnchorCustomCommand=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/delete');const canSaveAnchorCustomCommandQueueMode=auth('api/v1/system/wechatRobotGroup/anchorCustomCommand/queueModeSave');const anchorCustomCommands=ref<any[]>([]);const anchorCustomCommandQueueMode=ref('NORMAL');const anchorCustomCommandLoading=ref(false);
 const aiChatSaving=ref(false);const aiChatConfig=reactive<WechatRobotGroupAIChatConfig>({groupId:0,enabled:0, followupEnabled: 0,businessQueryEnabled:0,memoryEnabled:0,businessAccess:'OPERATORS_ONLY',robotGroupNickname:'',configurationReady:false,memoryConfigurationReady:false});const loadedAIChatGroupId=ref<number>();let aiChatRequestGeneration=0;
 const mobileMedia = window.matchMedia('(max-width: 768px)');
 const tabs = [
@@ -268,8 +236,7 @@ const tabs = [
 	{ name: 'schedule', label: '固定档与主持', description: '24 小时固定成员、主持和虚拟主持开厅。' },
 	{ name: 'report', label: '报备回厅', description: '报备开关、人数、时长和提示文字。' },
 	{ name: 'checkin', label: '打卡统计', description: '麦序、任务排、黑麦、收光、全麦、冠厅和互动统计。' },
-	{ name: 'queueMode', label: '扣排模式', description: '群成员发送 p、P、排参与排档。' },
-	{ name: 'anchorCustomCommand', label: '专属扣排', description: '主播绑定表情/图片作为专属扣排指令。' },
+	...(canReadAnchorCustomCommands ? [{ name: 'anchorCustomCommand', label: '专属扣排配置', description: '主播表情或图片专属扣排。' }] : []),
 	{ name: 'permission', label: '权限与提醒', description: '三来源管理员、命令策略和全体提醒。' },
 	{ name: 'template', label: '模板与口令', description: '当前群私有模板、触发口令和公共默认来源。' },
 ];
@@ -383,12 +350,9 @@ const loadReminderConfig=async()=>{if(!selectedGroupId.value||!canReadReminders)
 const openPermissionAudit=async()=>{const res:any=await getWechatRobotGroupPermissionReminderAudit(selectedGroupId.value!);permissionAudits.value=res.data.list||[];permissionAuditDrawer.value=true;};
 const loadPermissionSubTab=()=>{if(permissionSubTab.value==='admins'){loadSpecialTop();loadPermissionAdmins();}if(permissionSubTab.value==='reminders')loadReminderConfig();};
 const loadPermissionTab=()=>{loadTiming();loadPermissionSubTab();};
-const loadAnchorCustomCommandTab=async()=>{if(!selectedGroupId.value||!canReadAnchorCustomCommands)return;anchorCustomCommandLoading.value=true;try{const[listRes,modeRes]:any[]=await Promise.all([getAnchorCustomCommandList(selectedGroupId.value),getAnchorCustomCommandQueueMode(selectedGroupId.value)]);anchorCustomCommands.value=listRes.data.list||[];anchorCustomCommandQueueMode.value=modeRes.data.queueMode||'NORMAL';}finally{anchorCustomCommandLoading.value=false;}};
-const saveAnchorCustomQueueMode=async()=>{if(!selectedGroupId.value)return;await saveAnchorCustomCommandQueueMode({groupId:selectedGroupId.value,queueMode:anchorCustomCommandQueueMode.value});ElMessage.success('扣排模式已保存');};
-const deleteAnchorCustomCommandItem=async(row:any)=>{await ElMessageBox.confirm(`确认删除 ${row.anchorName||''} 的专属扣排指令？`,'提示',{type:'warning'});await deleteAnchorCustomCommand({groupId:selectedGroupId.value,anchorId:row.wechatAnchorProfileId});ElMessage.success('专属扣排指令已删除');await loadAnchorCustomCommandTab();};
 watch(()=>aiChatConfig.enabled,(value)=>{if(value!==1){aiChatConfig.businessQueryEnabled=0;aiChatConfig.followupEnabled = 0;}});
 watch(permissionSubTab,loadPermissionSubTab);
-watch(activeTab,(value)=>{if(value==='aiChat')loadAIChat();if(value==='current')loadCurrentQueue();if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();if(value==='anchorCustomCommand')loadAnchorCustomCommandTab();});
+watch(activeTab,(value)=>{if(value==='aiChat')loadAIChat();if(value==='current')loadCurrentQueue();if(value==='queue')loadQueueTab();if(value==='timing')loadTiming();if(value==='schedule')loadSchedulePlan();if(value==='report')loadReport();if(value==='checkin')loadStatistics();if(value==='permission')loadPermissionTab();if(value==='template')loadTemplateCommands();});
 watch(selectedGroupId,()=>{
 	overviewRequestGeneration++;
 	overview.value=undefined;
@@ -413,7 +377,6 @@ watch(selectedGroupId,()=>{
 	if(activeTab.value==='checkin')loadStatistics();
 	if(activeTab.value==='permission')loadPermissionTab();
 	if(activeTab.value==='template')loadTemplateCommands();
-	if(activeTab.value==='anchorCustomCommand')loadAnchorCustomCommandTab();
 });
 
 onMounted(() => {
