@@ -15,7 +15,7 @@ for (const expected of [
 	"getWechatRobotGroupMemberList",
 	"syncWechatRobotGroupMembers",
 	"includeLeft",
-	"立即同步",
+	"收集群成员",
 	"首次同步发现",
 	"max-height=\"420\"",
 ]) {
