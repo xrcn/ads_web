@@ -1,4 +1,8 @@
-# <a href="https://gitee.com/lyt-top/vue-next-admin" target="_blank">vue-next-admin 更新日志</a>
+# 前端上游模板历史日志
+
+> 以下保留 vue-next-admin 上游历史，不代表 ADS 产品版本、功能交付或当前依赖状态。ADS 自身变化统一查看 [共享变更记录](../docs/CHANGELOG.md)，开发与验证入口见 [README](./README.md)。
+
+## <a href="https://gitee.com/lyt-top/vue-next-admin" target="_blank">vue-next-admin 更新日志</a>
 
 🎉🎉🔥 `vue-next-admin` 基于 vue3.x 、Typescript、vite、Element plus 等，适配手机、平板、pc 的后台开源免费模板库（vue2.x 请切换 vue-prev-admin 分支）
 
