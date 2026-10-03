@@ -96,6 +96,9 @@
 							<div class="panel-heading"><div><h4>固定档与主持</h4><p>24小时循环配置；CREATED立即同步，RUNNING不改。</p></div><div><el-button v-if="canBatchPlan" @click="openBatchPlan">批量设置</el-button><el-button v-if="canExceptions" @click="openExceptions">当天例外</el-button><el-button v-if="canPlanAudit" @click="openPlanAudit">审计</el-button></div></div>
 							<el-table :data="schedulePlan.rows" border stripe max-height="620"><el-table-column label="时段" width="82"><template #default="{row}">{{row.hour}}-{{row.hour+1}}</template></el-table-column><el-table-column label="固定成员" min-width="260"><template #default="{row}"><el-tag v-for="m in row.fixedMembers" :key="m.memberWxid" :type="m.isPresent?'success':'danger'" class="mr5">{{m.memberName}}{{m.isPresent?'':'（已离群）'}}</el-tag><span v-if="!row.fixedMembers.length">-</span></template></el-table-column><el-table-column label="主持" min-width="150"><template #default="{row}">{{row.host.type==='OPEN'?'开厅':row.host.name||'未设置'}}</template></el-table-column><el-table-column prop="roundState" label="当前档状态" width="110"/><el-table-column label="操作" width="90"><template #default="{row}"><el-button v-if="canSavePlan" text type="primary" @click="editPlanRow(row)">编辑</el-button></template></el-table-column></el-table>
 						</template>
+						<template v-else-if="tab.name === 'queueNotice'">
+							<QueueNoticeTab v-if="activeTab === 'queueNotice' && selectedGroupId" :key="selectedGroupId" :group-id="selectedGroupId" />
+						</template>
 						<template v-else-if="tab.name === 'report'">
 							<div class="panel-heading"><div><h4>报备回厅</h4><p>配置仅影响新报备；关闭功能会静默关闭当前全部报备。</p></div><div><el-button v-if="canReportAudit" @click="openReportAudit">审计</el-button><el-button v-if="canSaveReport" type="primary" :loading="reportSaving" @click="saveReportForm">保存本页</el-button></div></div>
 							<el-form :model="reportConfig" label-width="140px" :disabled="!canSaveReport">
@@ -190,6 +193,7 @@ import { auth } from '/@/utils/authFunction';
 import { servicePeriodTagType, servicePeriodText, servicePeriodValue } from '/@/utils/wechatServicePeriod';
 import { getWechatGroupScheduleOverview } from '/@/api/wechatGroupSchedule';
 import AnchorCustomCommandTab from './components/AnchorCustomCommandTab.vue';
+import QueueNoticeTab from './components/QueueNoticeTab.vue';
 
 defineOptions({ name: 'wechatRobotConfig' });
 
@@ -233,6 +237,7 @@ const tabs = [
 	...(canReadCurrentQueue ? [{ name: 'current', label: '当前麦序', description: '当前小时主持与 P1-P8 麦位。' }] : []),
 	{ name: 'queue', label: '麦序规则', description: '扣排、手速、置顶、取排和 P8 规则。' },
 	{ name: 'timing', label: '定时排档', description: '麦序生命周期分钟、启用排档时段和 P8 购买时间。' },
+	...(auth('api/v1/system/wechatRobotGroup/queueNotice') ? [{ name: 'queueNotice', label: '麦序说明', description: '定时播报说明和群内设置。' }] : []),
 	{ name: 'schedule', label: '固定档与主持', description: '24 小时固定成员、主持和虚拟主持开厅。' },
 	{ name: 'report', label: '报备回厅', description: '报备开关、人数、时长和提示文字。' },
 	{ name: 'checkin', label: '打卡统计', description: '麦序、任务排、黑麦、收光、全麦、冠厅和互动统计。' },
