@@ -1,17 +1,4 @@
-import request from '/@/utils/request';
-
-export interface FlowDataConfig {
-	account: string;
-	password: string;
-	vvToken: string;
-}
-
-export interface FlowDataLoginInput {
-	sessionId: string;
-	account: string;
-	password: string;
-	verifyCode: string;
-}
+import { vvCustomerRequest as request } from '/@/utils/vvCustomerScope';
 
 export interface FlowDataPageQuery {
 	pageNum: number;
@@ -167,11 +154,6 @@ export const getFlowDataDaily = (params: FlowDataPageQuery) => request({ url: '/
 export const getFlowDataTasks = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/tasks', method: 'get', params });
 export const getFlowDataHealth = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/health', method: 'get', params });
 export const getFlowDataScoreLogs = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/scoreLogs', method: 'get', params });
-export const getVVAuthConfig = () => request({ url: '/api/v1/system/vvAuth/config', method: 'get' });
-export const saveVVAuthConfig = (data: FlowDataConfig) => request({ url: '/api/v1/system/vvAuth/config', method: 'put', data });
-export const getVVAuthCaptcha = () => request({ url: '/api/v1/system/vvAuth/captcha', method: 'get' });
-export const loginVVAuth = (data: FlowDataLoginInput) => request({ url: '/api/v1/system/vvAuth/login', method: 'post', data });
-export const getVVAuthStatus = () => request({ url: '/api/v1/system/vvAuth/status', method: 'get' });
 export const syncAnchorIncome = (data: AnchorIncomeSyncInput = {}) => request({ url: '/api/v1/system/flowData/anchorIncome/sync', method: 'post', data, timeout: 180000 });
 export const getAnchorIncomeSummary = () => request({ url: '/api/v1/system/flowData/anchorIncome/summary', method: 'get' });
 export const getAnchorIncomeList = (params: FlowDataPageQuery) => request({ url: '/api/v1/system/flowData/anchorIncome/list', method: 'get', params });

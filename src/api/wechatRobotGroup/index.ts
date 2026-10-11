@@ -1,5 +1,18 @@
 import request from '/@/utils/request';
 
+export interface WechatRobotGroupCustomerBinding {
+	customerId: number;
+	customerNo: string;
+	customerName: string;
+	customerBindingVersion: number;
+}
+
+export interface WechatRobotGroupCustomerSave {
+	// Omitted means preserve; zero explicitly removes the binding.
+	customerId?: number;
+	customerBindingVersion?: number;
+}
+
 export interface WechatRobotGroupAIChatConfig {
 	groupId: number;
 	enabled: 0 | 1;
@@ -72,7 +85,7 @@ export function getWechatRobotGroupDetail(id: number) {
 	});
 }
 
-export function addWechatRobotGroup(data: object) {
+export function addWechatRobotGroup(data: object & WechatRobotGroupCustomerSave) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/add',
 		method: 'post',
@@ -80,7 +93,7 @@ export function addWechatRobotGroup(data: object) {
 	});
 }
 
-export function editWechatRobotGroup(data: object) {
+export function editWechatRobotGroup(data: object & WechatRobotGroupCustomerSave) {
 	return request({
 		url: '/api/v1/system/wechatRobotGroup/edit',
 		method: 'put',

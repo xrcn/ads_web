@@ -1,0 +1,48 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc';
+const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const login = read('src/views/flowData/login/index.vue');
+const group = read('src/views/wechat/group/index.vue');
+assert.ok(login.includes('customerNo'), 'customer list must display server customer number');
+assert.ok(login.includes('loginGeneration'), 'captcha/login responses must be fenced by dialog generation');
+assert.ok(!login.includes('config.vvToken'), 'raw token editor must be removed');
+assert.ok(login.includes("CONFLICT:'家族身份冲突'") && login.includes("row.authStatus==='CONFLICT'?'danger'"), 'identity quarantine must be visible');
+assert.ok(login.includes("if(res.data.status==='CONFLICT')await loadList()"), 'conflict refresh must reload the new customer version');
+assert.ok(group.includes('v-model="form.customerId"'), 'group must explicitly select customer');
+assert.ok(group.includes('customerBindingVersion'), 'group must preserve binding version');
+assert.ok(group.includes('getAnchorHallOptions(customerId)'), 'hall options must carry selected customer');
+console.log('VV customer page contracts passed (6 checks)');
+
+const scopeSource=read('src/utils/vvCustomerScope.ts');
+const calls=[];const notices=[];
+class CanceledError extends Error { code='ERR_CANCELED'; }
+const exports={};
+const compiled=ts.transpileModule(scopeSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const mockRequire=(name)=>name==='vue'?{ref:(value)=>({value})}:name==='axios'?{CanceledError}:name==='element-plus'?{ElMessage:{error:(message)=>notices.push(message)}}:{default:(config)=>new Promise((resolve,reject)=>calls.push({config,resolve,reject}))};
+new Function('require','exports',compiled)(mockRequire,exports);
+await assert.rejects(exports.vvCustomerRequest({method:'get'}),{code:'ERR_CANCELED'});
+assert.equal(calls.length,0,'no customer means no network request');
+exports.selectVVCustomer(11);
+const params={pageNum:1};const pending=exports.vvCustomerRequest({method:'get',params});
+params.pageNum=9;
+assert.equal(calls[0].config.params.customerId,11);
+assert.equal(calls[0].config.params.pageNum,1,'caller mutations cannot change dispatched query');
+exports.selectVVCustomer(22);
+assert.ok(calls[0].config.signal.aborted);
+calls[0].resolve({data:{customerId:11}});
+await assert.rejects(pending,{code:'ERR_CANCELED'});
+assert.equal(notices.length,0,'customer switch cancellation is quiet');
+const write=exports.vvCustomerRequest({method:'post',data:{customerId:999,scope:'DAILY'}});
+assert.equal(calls[1].config.data.customerId,22);
+assert.equal(calls[1].config.params.customerId,22);
+calls[1].resolve({data:{ok:true}});await write;
+console.log('VV customer request isolation passed (8 checks)');
+
+const roots=['src/views/flowData','src/views/home','src/views/anchor/hall','src/views/anchor/manage'];
+const files=[];
+const walk=(path)=>{for(const entry of fs.readdirSync(new URL(`../${path}`,import.meta.url),{withFileTypes:true})){const child=`${path}/${entry.name}`;if(entry.isDirectory())walk(child);else if(child.endsWith('.vue'))files.push(child);}};
+roots.forEach(walk);files.push('src/views/wechat/group/index.vue','src/components/vvCustomerScope/index.vue');
+for(const filename of files){const source=read(filename);assert.ok(!source.startsWith('\uFEFF'),`${filename}: BOM`);assert.ok(!/^(<<<<<<<|=======|>>>>>>>)/m.test(source),`${filename}: conflict markers`);const {descriptor,errors}=parse(source,{filename});assert.equal(errors.length,0,`${filename}: parse errors`);const script=compileScript(descriptor,{id:filename});const template=compileTemplate({id:filename,source:descriptor.template.content,filename,compilerOptions:{bindingMetadata:script.bindings}});assert.equal(template.errors.length,0,`${filename}: template errors ${template.errors}`);}
+console.log(`Vue script/template syntax passed (${files.length} files; no application build)`);

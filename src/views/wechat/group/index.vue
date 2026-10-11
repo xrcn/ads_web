@@ -62,6 +62,7 @@
 				<el-table-column prop="groupName" label="微信群名称" min-width="160" show-overflow-tooltip />
 				<el-table-column prop="hallNo" label="厅号" min-width="110" show-overflow-tooltip />
 				<el-table-column prop="defaultPlatformCode" label="默认平台" min-width="110"><template #default="{row}">{{ platformName(row.defaultPlatformCode) }}</template></el-table-column>
+				<el-table-column label="客户" min-width="180"><template #default="{row}">{{ customerLabel(row) }}</template></el-table-column>
 				<el-table-column prop="defaultHallId" label="默认厅" min-width="100"><template #default="{row}">{{ row.defaultHallName || hallName(row.defaultHallId) }}</template></el-table-column>
 				<el-table-column prop="groupWxid" label="微信群wxid" min-width="180" show-overflow-tooltip />
 				<el-table-column prop="robotName" label="绑定机器人" min-width="140" show-overflow-tooltip />
@@ -114,6 +115,7 @@
 						<div><dt>微信群 wxid</dt><dd>{{ row.groupWxid || '-' }}</dd></div>
 						<div><dt>机器人 appId</dt><dd>{{ row.appId || '-' }}</dd></div>
 						<div><dt>默认平台</dt><dd>{{ platformName(row.defaultPlatformCode) }}</dd></div>
+						<div><dt>客户</dt><dd>{{ customerLabel(row) }}</dd></div>
 						<div><dt>默认厅</dt><dd>{{ row.defaultHallName || hallName(row.defaultHallId) }}</dd></div>
 						<div><dt>备注</dt><dd>{{ row.remark || '-' }}</dd></div>
 						<div v-if="canReadFixedSchedule"><dt>固定档设置</dt><dd><el-switch v-if="canSaveFixedSchedule" :model-value="row.fixedScheduleEnabled" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" :loading="Boolean(fixedScheduleSaving[row.id])" @change="toggleFixedSchedule(row, $event)" /><span v-else>{{ row.fixedScheduleEnabled === 1 ? '已开启' : '未开启' }}</span></dd></div>
@@ -167,6 +169,7 @@
 		<el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" destroy-on-close>
 			<el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
 				<el-row :gutter="20">
+					<el-col :span="12"><el-form-item label="客户"><el-select v-model="form.customerId" filterable class="w100" @change="changeCustomer"><el-option label="未绑定客户" :value="0"/><el-option v-for="item in formCustomerOptions" :key="item.id" :label="`${item.customerNo} · ${item.customerName}${item.status===0?'（已停用）':''}`" :value="item.id" :disabled="item.status!==1"/></el-select></el-form-item></el-col>
 					<el-col :span="12">
 						<el-form-item label="绑定机器人" prop="wechatRobotAccountId">
 							<el-select v-model="form.wechatRobotAccountId" placeholder="请选择机器人" filterable class="w100">
@@ -262,6 +265,7 @@ import {
 	syncWechatRobotGroupMembers,
 } from '/@/api/wechatRobotGroup';
 import { getWechatRobotAccountOptions } from '/@/api/wechatRobotAccount';
+import { getVVCustomerOptions,type VVCustomerOption } from '/@/api/system/vvCustomer';
 import { getAnchorHallOptions,getAnchorPlatformOptions } from '/@/api/anchor';
 import { auth } from '/@/utils/authFunction';
 import { servicePeriodTagType, servicePeriodText, servicePeriodTooltip } from '/@/utils/wechatServicePeriod';
@@ -275,6 +279,7 @@ const saving = ref(false);
 const dialogVisible = ref(false);
 const dialogTitle = ref('新增微信群');
 const accountOptions = ref<any[]>([]);
+const customerOptions=ref<VVCustomerOption[]>([]);
 const platformOptions = ref<any[]>([]); const hallOptions = ref<any[]>([]);
 const policyVisible = ref(false);
 const adminLoading = ref(false);
@@ -308,6 +313,10 @@ const total = ref(0);
 
 const createForm = () => ({
 	id: 0,
+	customerId: 0,
+	customerBindingVersion: 0,
+	customerNo: '',
+	customerName: '',
 	wechatRobotAccountId: '',
 	groupWxid: '',
 	groupName: '',
@@ -332,6 +341,7 @@ const rules: FormRules = {
 
 const resetForm = () => {
 	Object.assign(form, createForm());
+	++hallGeneration;hallOptions.value=[];
 	formRef.value?.clearValidate();
 };
 
@@ -404,7 +414,12 @@ const syncMembers = (row: any) => {
 			panel.syncing = false;
 		});
 };
-const loadDefaults=async()=>{const [p,h]:any[]=await Promise.all([getAnchorPlatformOptions(),getAnchorHallOptions()]);platformOptions.value=p.data.list??[];hallOptions.value=h.data.list??[];};
+const customerLabel=(row:any)=>row.customerId?`${row.customerNo || row.customerId} · ${row.customerName || '-'}`:'未绑定';
+const formCustomerOptions=computed(()=>!form.customerId||customerOptions.value.some(item=>item.id===form.customerId)?customerOptions.value:[...customerOptions.value,{id:form.customerId,customerNo:form.customerNo,customerName:form.customerName,status:0 as const}]);
+let hallGeneration=0;
+const loadCustomerHalls=async(customerId:number)=>{const generation=++hallGeneration;hallOptions.value=[];if(!customerId)return;const res:any=await getAnchorHallOptions(customerId);if(generation===hallGeneration&&form.customerId===customerId)hallOptions.value=res.data.list??[];};
+const changeCustomer=()=>{form.defaultHallId='';form.defaultHallName='';void loadCustomerHalls(form.customerId);};
+const loadDefaults=async()=>{const [p,c]:any[]=await Promise.all([getAnchorPlatformOptions(),getVVCustomerOptions()]);platformOptions.value=p.data.list??[];customerOptions.value=c.data.list??[];};
 const platformName=(code:string)=>platformOptions.value.find((p:any)=>p.code===code)?.name||code||'-'; const hallName=(id:number)=>hallOptions.value.find((h:any)=>h.hallId===id)?.hallName||'-';
 
 const toggleFixedSchedule = async (row: any, enabled: number) => {
@@ -448,6 +463,7 @@ const openEdit = (row: any) => {
 	dialogTitle.value = '编辑微信群';
 	getWechatRobotGroupDetail(row.id).then((res: any) => {
 		Object.assign(form, res.data.wechatRobotGroup || res.data || {});
+		void loadCustomerHalls(form.customerId);
 		dialogVisible.value = true;
 	});
 };
