@@ -40,6 +40,24 @@ assert.equal(calls[1].config.params.customerId,22);
 calls[1].resolve({data:{ok:true}});await write;
 console.log('VV customer request isolation passed (8 checks)');
 
+const freshScope=()=>{const state={};new Function('require','exports',compiled)(mockRequire,state);return state;};
+const defaultOptions=[{id:11,status:1,isDefault:true,hasVVAccount:true},{id:22,status:1,isDefault:false,hasVVAccount:false}];
+const initial=freshScope();
+assert.equal(typeof initial.initializeDefaultVVCustomer,'function','first page must initialize its configured default customer');
+initial.initializeDefaultVVCustomer(defaultOptions);
+assert.equal(initial.selectedVVCustomerId.value,11);
+initial.selectVVCustomer(22);initial.initializeDefaultVVCustomer(defaultOptions);
+assert.equal(initial.selectedVVCustomerId.value,22,'late default must not override a manual choice');
+initial.selectVVCustomer(0);initial.initializeDefaultVVCustomer(defaultOptions);
+assert.equal(initial.selectedVVCustomerId.value,0,'explicit clearing must remain cleared');
+const noDefault=freshScope();noDefault.initializeDefaultVVCustomer(defaultOptions.map(item=>({...item,isDefault:false})));
+assert.equal(noDefault.selectedVVCustomerId.value,0,'no implicit first-customer fallback');
+noDefault.initializeDefaultVVCustomer(defaultOptions);
+assert.equal(noDefault.selectedVVCustomerId.value,11,'retry may initialize a now-available default');
+const disabledDefault=freshScope();disabledDefault.initializeDefaultVVCustomer([{id:11,status:0,isDefault:true},{id:22,status:1,isDefault:false}]);
+assert.equal(disabledDefault.selectedVVCustomerId.value,0,'disabled default must not select another customer');
+console.log('VV customer initial selection passed (6 checks)');
+
 const roots=['src/views/flowData','src/views/home','src/views/anchor/hall','src/views/anchor/manage'];
 const files=[];
 const walk=(path)=>{for(const entry of fs.readdirSync(new URL(`../${path}`,import.meta.url),{withFileTypes:true})){const child=`${path}/${entry.name}`;if(entry.isDirectory())walk(child);else if(child.endsWith('.vue'))files.push(child);}};

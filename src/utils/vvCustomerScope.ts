@@ -6,12 +6,20 @@ import request from '/@/utils/request';
 export const selectedVVCustomerId = ref(0);
 let generation = 0;
 let controller = new AbortController();
+let selectionChosen = false;
 export function selectVVCustomer(customerId: number) {
+	selectionChosen = true;
 	if (customerId === selectedVVCustomerId.value) return;
 	controller.abort();
 	controller = new AbortController();
 	++generation;
 	selectedVVCustomerId.value = customerId;
+}
+
+export function initializeDefaultVVCustomer(options: { id: number; status: number; isDefault?: boolean }[]) {
+	if (selectionChosen || selectedVVCustomerId.value) return;
+	const defaults = options.filter(item => item.status === 1 && item.isDefault);
+	if (defaults.length === 1) selectVVCustomer(defaults[0].id);
 }
 
 // Freeze identity before dispatch; a changed selection cancels every request from the old scope.
