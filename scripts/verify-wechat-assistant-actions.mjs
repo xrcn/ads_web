@@ -29,11 +29,8 @@ for (const expected of [
 }
 
 const chatWatcher = page.match(/watch\(\(\)=>aiChatConfig\.enabled,[\s\S]*?\}\);/)?.[0] || '';
-if (!chatWatcher.includes('aiChatConfig.businessQueryEnabled=0') || !chatWatcher.includes('aiChatConfig.followupEnabled = 0')) {
-	throw new Error('chat-disabled normalization missing');
-}
-if (chatWatcher.includes('assistantActionEnabled') || chatWatcher.includes('assistantActionAccess')) {
-	throw new Error('chat-disabled normalization must not change assistant actions');
+if (/aiChatConfig\.(businessQueryEnabled|followupEnabled|assistantActionEnabled|assistantActionAccess)\s*=/.test(chatWatcher)) {
+	throw new Error('chat changes must not reset other assistant features or permissions');
 }
 
 for (const expected of ["RESIGN_DOUBLE_BAN: '离职双封'", "APPROVE_ANCHOR_SIGNING: '签约'", "APPROVE_HALL_CHANGE: '修改所属厅'"]) {
