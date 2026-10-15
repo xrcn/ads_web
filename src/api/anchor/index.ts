@@ -55,6 +55,8 @@ export const getAnchorHallList = (params: object) => vvCustomerRequest({ url: '/
 export const getAnchorHallDetail = (hallId: number) => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/detail', method: 'get', params: { hallId } });
 export const addAnchorHall = (data: object) => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/add', method: 'post', data });
 export const editAnchorHall = (data: object) => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/edit', method: 'put', data });
+export const transferAnchorHall = (data: { hallId: number; targetCustomerId: number }) => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/transfer', method: 'post', data });
+export const cancelAnchorHallTransfer = (data: { hallId: number }) => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/transferCancel', method: 'post', data });
 export const syncVVHallScores = () => vvCustomerRequest({ url: '/api/v1/system/anchor/hall/vvScoreSync', method: 'post', timeout: 180000 });
 export const syncVVAnchors = () => vvCustomerRequest({ url: '/api/v1/system/anchor/vvSync', method: 'post' }) as unknown as Promise<{ data: AnchorVVSyncAccepted }>;
 export const getVVAnchorSyncSummary = () => vvCustomerRequest({ url: '/api/v1/system/anchor/vvSyncSummary', method: 'get' });

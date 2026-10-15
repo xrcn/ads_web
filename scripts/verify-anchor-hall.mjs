@@ -4,7 +4,7 @@ import path from 'node:path';
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const api = read('src/api/anchor/index.ts');
-const page = read('src/views/anchor/hall/index.vue');
+const page = read('src/views/anchor/hall/content.vue');
 const anchorEdit = read('src/views/anchor/manage/component/editAnchor.vue');
 const group = read('src/views/wechat/group/index.vue');
 const mic = read('src/views/anchor/mic/component/editMic.vue');
@@ -15,6 +15,8 @@ for (const [source, needle] of [
 	[api, '/anchor/hall/add'],
 	[api, '/anchor/hall/edit'],
 	[api, '/anchor/hall/vvScoreSync'],
+	[api, '/anchor/hall/transfer'],
+	[api, '/anchor/hall/transferCancel'],
 	[page, '厅 ID'],
 	[page, '厅名'],
 	[page, '厅马甲'],
@@ -24,6 +26,10 @@ for (const [source, needle] of [
 	[page, '关联微信群'],
 	[page, '停用后现有关联和历史记录不会被清除'],
 	[page, '同步厅健康分'],
+	[page, '转移厅'],
+	[page, '目标客户'],
+	[page, 'transferDate'],
+	[page, 'nextShanghaiMonday'],
 	[page, 'sync-type="HALL_SCORE"'],
 	[page, 'sortable="custom"'],
 	[page, '@sort-change="handleSortChange"'],
