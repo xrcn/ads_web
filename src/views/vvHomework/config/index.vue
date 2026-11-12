@@ -5,9 +5,9 @@
 		<div v-if="error" class="load-error" role="alert">{{ error }}<el-button text @click="load">重试</el-button></div>
 		<el-skeleton v-if="loading && !loaded" :rows="4" animated /><el-form v-if="loaded" v-loading="loading" :disabled="loading || saving" label-position="top" class="form">
 			<el-form-item label="允许新用户登记"><el-switch v-model="form.allowRegistration" /><span class="hint">关闭后已登记用户仍可登录。</span></el-form-item>
-			<el-form-item label="首次登录自动授权"><el-switch v-model="form.autoGrant" /><span class="hint">关闭时新用户进入待授权状态，由后台单独开通。</span></el-form-item>
+			<el-form-item label="首次登录自动授权"><el-switch v-model="form.autoGrant" /><span class="hint">关闭时新用户可登录VV，但不能采集或作业，由后台单独开通。</span></el-form-item>
 			<el-form-item label="首次可用时长（小时）"><el-input-number v-model="form.durationHours" :min="form.autoGrant ? 1 : 0" :max="87600" :precision="0" /><span class="hint">自动授权开启时必须大于0，已有用户的到期时间不变。</span></el-form-item>
-			<el-form-item label="默认每日成功触达上限"><el-input-number v-model="form.dailyLimit" :min="0" :max="10000" :precision="0" /><span class="hint">按不同收件 ID 计数，自动与指定作业共享；0表示禁止发送。</span></el-form-item>
+			<el-form-item label="默认每日成功触达上限（0表示禁止发送）"><el-input-number v-model="form.dailyLimit" :min="0" :max="10000" :precision="0" /><span class="hint">按不同收件 ID 计数，自动与指定作业共享；0表示禁止发送。</span></el-form-item>
 			<el-form-item label="配置说明"><el-input v-model="form.description" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
 			<el-form-item><el-button v-auth="'api/v1/system/vvHomework/config'" type="primary" :loading="saving" @click="save">保存首登配置</el-button></el-form-item>
 		</el-form>
@@ -19,7 +19,7 @@ import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getHomeworkConfig, saveHomeworkConfig, homeworkError, type HomeworkConfig } from '/@/api/vvHomework';
 defineOptions({ name: 'vvHomeworkConfig' });
-const form = reactive<HomeworkConfig>({ allowRegistration: true, autoGrant: false, durationHours: 0, dailyLimit: 200, revision: 0, description: '' });
+const form = reactive<HomeworkConfig>({ allowRegistration: true, autoGrant: false, durationHours: 0, dailyLimit: 0, revision: 0, description: '' });
 const loading = ref(false), saving = ref(false), loaded = ref(false), error = ref('');
 let generation = 0, requestController: AbortController | undefined;
 const lifetime = new AbortController();

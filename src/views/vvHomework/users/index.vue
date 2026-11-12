@@ -11,17 +11,25 @@
 		<el-alert v-if="listError" :title="listError" type="error" :closable="false" class="error" />
 		<el-table v-loading="loading" :data="users" border stripe empty-text="暂无软件用户，用户通过 VV 身份校验后会自动登记。">
 			<el-table-column label="用户" min-width="230" fixed><template #default="{ row }"><div class="identity"><el-avatar :src="row.avatarUrl" :size="38">VV</el-avatar><div><strong>{{ row.vvAccount }}</strong><div class="muted">{{ row.nickname || '昵称未获取' }}</div></div></div></template></el-table-column>
-			<el-table-column label="性别" width="85"><template #default="{ row }">{{ row.virtualRoleSex === 1 ? '男' : row.virtualRoleSex === 2 ? '女' : '未知' }}</template></el-table-column>
+			<el-table-column label="性别" width="85"><template #default="{ row }">{{ row.sex === 1 ? '男' : row.sex === 2 ? '女' : '未知' }}</template></el-table-column>
 			<el-table-column label="授权" width="95"><template #default="{ row }"><el-tag :type="row.authorization.status === 'VALID' ? 'success' : 'warning'">{{ authorizationNames[row.authorization.status] }}</el-tag></template></el-table-column>
 			<el-table-column label="到期时间（北京）" min-width="185"><template #default="{ row }">{{ beijingTime(row.expiresAt) }}</template></el-table-column>
 			<el-table-column label="今日成功 / 日限" width="140"><template #default="{ row }">{{ row.usage.confirmed }} / {{ row.dailyLimit }}</template></el-table-column>
 			<el-table-column label="预占 / 剩余" width="120"><template #default="{ row }">{{ row.usage.reserved }} / {{ row.usage.remaining }}</template></el-table-column>
 			<el-table-column label="软件 / VV" width="150"><template #default="{ row }"><el-tag :type="row.softwareOnline ? 'success' : 'info'">{{ row.softwareOnline ? '在线' : '离线' }}</el-tag><div class="muted">VV {{ row.vvReady ? '已连接' : '未连接' }}</div></template></el-table-column>
 			<el-table-column label="最近活跃（北京）" min-width="185"><template #default="{ row }">{{ beijingTime(row.lastActiveAt) }}</template></el-table-column>
-			<el-table-column label="操作" width="235" fixed="right"><template #default="{ row }"><el-button text @click="openDetail(row)">详情</el-button><el-button v-auth="'api/v1/system/vvHomework/user/authorization'" text type="primary" @click="openEdit(row)">授权</el-button><el-button v-auth="'api/v1/system/vvHomework/user/status'" text @click="toggle(row)">{{ row.status ? '停用' : '启用' }}</el-button></template></el-table-column>
+			<el-table-column label="操作" width="300" fixed="right"><template #default="{ row }"><el-button text @click="openDetail(row)">详情</el-button><el-button v-auth="'api/v1/system/vvHomework/user/authorization'" text type="primary" @click="openEdit(row)">授权</el-button><el-button v-auth="'api/v1/system/vvHomework/user/status'" text @click="toggle(row)">{{ row.status ? '停用' : '启用' }}</el-button><el-button v-auth="'api/v1/system/vvHomework/user/delete'" text type="danger" :disabled="row.softwareOnline" :title="row.softwareOnline ? '请先在详情中强制下线' : '彻底删除此用户'" @click="openDelete(row)">删除</el-button></template></el-table-column>
 		</el-table>
 		<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="load" />
 	</el-card>
+
+ <el-dialog v-model="deleteOpen" title="彻底删除软件用户" destroy-on-close @closed="closeDelete" width="540px" :close-on-click-modal="false" :close-on-press-escape="!deleting" :show-close="!deleting">
+  <el-alert v-if="deleteError" :title="deleteError" type="error" :closable="false" />
+  <p>将彻底删除 {{ deletingUser?.vvAccount }} / {{ deletingUser?.nickname || '昵称未获取' }} 的资料、密码密文、授权、会话、额度、发送记录和用户审计。</p>
+  <el-alert title="不可通过撤销恢复；已发送消息不会撤回。同号再次登录将按新用户登记，旧账本不回灌，本机模板与素材保留。" type="warning" :closable="false" />
+  <el-form label-position="top" :disabled="deleting"><el-form-item label="手工输入该VV号确认删除"><el-input v-model="deleteConfirmation" autocomplete="off" :placeholder="deletingUser?.vvAccount" /></el-form-item></el-form>
+  <template #footer><el-button :disabled="deleting" @click="deleteOpen = false">取消</el-button><el-button type="danger" :loading="deleting" :disabled="deleteConfirmation.trim() !== deletingUser?.vvAccount" @click="removeUser">彻底删除</el-button></template>
+ </el-dialog>
 
 	<el-dialog v-model="editOpen" title="用户授权" width="540px" :close-on-click-modal="false">
 		<el-alert v-if="editError" :title="editError" type="error" :closable="false" /><el-form label-position="top" :disabled="saving">
@@ -39,7 +47,7 @@
 		<el-alert v-if="detailError" :title="detailError" type="error" :closable="false" />
 		<el-descriptions v-if="detail" :column="2" border>
 			<el-descriptions-item label="VV号">{{ detail.vvAccount }}</el-descriptions-item><el-descriptions-item label="昵称">{{ detail.nickname }}</el-descriptions-item>
-			<el-descriptions-item label="资料来源">{{ detail.profileSource }}</el-descriptions-item><el-descriptions-item label="密码">{{ detail.hasPassword ? '已加密保存' : '未保存' }} <el-button v-auth="'api/v1/system/vvHomework/user/password'" text type="primary" @click="showPassword">查看密码</el-button></el-descriptions-item>
+			<el-descriptions-item label="性别（VV资料）">{{ detail.sex === 1 ? '男' : detail.sex === 2 ? '女' : '未知' }}</el-descriptions-item><el-descriptions-item label="资料来源">{{ detail.profileSource }}</el-descriptions-item><el-descriptions-item label="密码">{{ detail.hasPassword ? '已加密保存' : '未保存' }} <el-button v-auth="'api/v1/system/vvHomework/user/password'" text type="primary" @click="showPassword">查看密码</el-button></el-descriptions-item>
 			<el-descriptions-item label="首次登记">{{ beijingTime(detail.createdAt) }}</el-descriptions-item><el-descriptions-item label="最近登录">{{ beijingTime(detail.lastLoginAt) }}</el-descriptions-item>
 			<el-descriptions-item label="累计成功触达人次">{{ detail.totalSuccess }}</el-descriptions-item><el-descriptions-item label="最近IP">{{ detail.ip || '—' }}</el-descriptions-item>
 			<el-descriptions-item label="客户端版本">{{ detail.clientVersion || '—' }}</el-descriptions-item><el-descriptions-item label="构建ID">{{ detail.buildId || '—' }}</el-descriptions-item>
@@ -63,7 +71,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { authorizationNames, beijingTime, homeworkError, listHomeworkUsers, getHomeworkUser, getHomeworkAudit, saveHomeworkAuthorization, setHomeworkStatus, logoutHomeworkUser, viewHomeworkPassword, resolveHomeworkAttempt, type HomeworkUser, type UserQuery, type Pending, type Audit } from '/@/api/vvHomework';
+import { deleteHomeworkUser, authorizationNames, beijingTime, homeworkError, listHomeworkUsers, getHomeworkUser, getHomeworkAudit, saveHomeworkAuthorization, setHomeworkStatus, logoutHomeworkUser, viewHomeworkPassword, resolveHomeworkAttempt, type HomeworkUser, type UserQuery, type Pending, type Audit } from '/@/api/vvHomework';
 defineOptions({ name: 'vvHomeworkUsers' });
 const query = reactive<UserQuery>({ keyword: '', status: '', online: '', authorization: '', pageNum: 1, pageSize: 20 });
 const users = ref<HomeworkUser[]>([]), total = ref(0), loading = ref(false), listError = ref('');
@@ -81,17 +89,37 @@ async function load() { const generation = ++listGeneration; listController?.abo
 function search() { query.pageNum = 1; void load(); }
 function reset() { Object.assign(query, { keyword: '', status: '', online: '', authorization: '', pageNum: 1 }); void load(); }
 function openEdit(u: HomeworkUser) { editError.value = ''; editing.value = u; Object.assign(edit, { dailyLimit: u.dailyLimit, status: u.status, remark: u.remark }); editDate.value = u.expiresAt ? beijingTime(u.expiresAt) : ''; editOpen.value = true; }
-async function saveEdit() { if (!editing.value) return; if (!Number.isInteger(edit.dailyLimit)) { ElMessage.warning('请填写每日上限'); return; } const date = editDate.value ? new Date(editDate.value.replace(' ', 'T') + '+08:00') : null; if (date && Number.isNaN(date.getTime())) { ElMessage.warning('请填写有效的北京时间'); return; } const expiresAt = date ? date.toISOString() : null; saving.value = true; editError.value = ''; try { await saveHomeworkAuthorization({ id: editing.value.id, revision: editing.value.revision, expiresAt, ...edit }, lifetime.signal); if (!lifetime.signal.aborted) { editOpen.value = false; ElMessage.success('授权已保存'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) editError.value = homeworkError(problem); } finally { saving.value = false; } }
+async function saveEdit() { if (!editing.value) return; if (!Number.isInteger(edit.dailyLimit)) { ElMessage.warning('请填写每日上限'); return; } const date = editDate.value ? new Date(editDate.value.replace(' ', 'T') + '+08:00') : null; if (date && Number.isNaN(date.getTime())) { ElMessage.warning('请填写有效的北京时间'); return; } const expiresAt = date ? date.toISOString() : null; saving.value = true; editError.value = ''; try { await saveHomeworkAuthorization({ registrationId:editing.value.registrationId,id: editing.value.id, revision: editing.value.revision, expiresAt, ...edit }, lifetime.signal); if (!lifetime.signal.aborted) { editOpen.value = false; ElMessage.success('授权已保存'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) editError.value = homeworkError(problem); } finally { saving.value = false; } }
 async function toggle(u: HomeworkUser) { try { await setHomeworkStatus(u, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success(u.status ? '账号已停用' : '账号已启用'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) listError.value = homeworkError(problem); } }
 async function openDetail(u: HomeworkUser) { closeDetail(); detailOpen.value = true; detail.value = u; auditPage.value = 1; const generation = ++detailGeneration; detailController = new AbortController(); void loadAudit(); try { const res = await getHomeworkUser(u.id, detailController.signal); if (generation === detailGeneration && detailOpen.value) detail.value = res.data; } catch { if (generation === detailGeneration && detailOpen.value) detailError.value = '详情加载失败，可关闭后重新打开。'; } }
 async function loadAudit() { if (!detail.value) return; const id = detail.value.id, generation = ++auditGeneration; auditController?.abort(); auditController = new AbortController(); auditLoading.value = true; auditError.value = ''; try { const res = await getHomeworkAudit(id, auditPage.value, auditController.signal); if (generation === auditGeneration && detail.value?.id === id) { audits.value = res.data.list; pending.value = res.data.pending; auditTotal.value = res.data.total; } } catch { if (generation === auditGeneration && detailOpen.value) auditError.value = '审计加载失败，可重新打开详情重试。'; } finally { if (generation === auditGeneration) auditLoading.value = false; } }
 function closeDetail() { ++detailGeneration; ++auditGeneration; detailController?.abort(); auditController?.abort(); detailError.value = ''; auditError.value = ''; audits.value = []; pending.value = []; auditTotal.value = 0; clearPassword(); }
 async function forceLogout() { if (!detail.value) return; try { await logoutHomeworkUser(detail.value, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success('已停止该软件会话的新派发'); detailOpen.value = false; await load(); } } catch (problem) { if (!lifetime.signal.aborted) detailError.value = homeworkError(problem); } }
 function clearPassword() { passwordController?.abort(); password.value = ''; passwordError.value = ''; if (passwordTimer) clearTimeout(passwordTimer); passwordTimer = undefined; passwordOpen.value = false; }
-async function showPassword() { if (!detail.value) return; clearPassword(); passwordController = new AbortController(); const controller = passwordController; passwordOpen.value = true; passwordLoading.value = true; try { const res = await viewHomeworkPassword(detail.value.id, controller.signal); if (!controller.signal.aborted && passwordOpen.value) { password.value = res.data.password; passwordTimer = setTimeout(clearPassword, 30000); } } catch (problem) { if (!controller.signal.aborted && passwordOpen.value) passwordError.value = homeworkError(problem); } finally { passwordLoading.value = false; } }
+async function showPassword() { if (!detail.value) return; clearPassword(); passwordController = new AbortController(); const controller = passwordController; passwordOpen.value = true; passwordLoading.value = true; try { const res = await viewHomeworkPassword(detail.value.id, controller.signal,detail.value.registrationId); if (!controller.signal.aborted && passwordOpen.value) { password.value = res.data.password; passwordTimer = setTimeout(clearPassword, 30000); } } catch (problem) { if (!controller.signal.aborted && passwordOpen.value) passwordError.value = homeworkError(problem); } finally { passwordLoading.value = false; } }
 function openResolve(row: Pending) { resolutionError.value = ''; Object.assign(resolution, { recordId: row.recordId, status: 'NOT_SENT', messageId: '', reason: '' }); resolveOpen.value = true; }
-async function resolve() { if (!detail.value) return; if (resolution.reason.trim().length < 2 || (resolution.status === 'CONFIRMED' && !resolution.messageId.trim())) { ElMessage.warning('请填写核实依据及必要的真实消息ID'); return; } resolving.value = true; try { await resolveHomeworkAttempt({ id: detail.value.id, ...resolution }, lifetime.signal); if (!lifetime.signal.aborted) { resolveOpen.value = false; ElMessage.success('核实结果已记录'); await loadAudit(); await load(); } } catch (problem) { if (!lifetime.signal.aborted) resolutionError.value = homeworkError(problem); } finally { resolving.value = false; } }
-onMounted(() => { void load(); pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && !loading.value && !saving.value && !editOpen.value && !listError.value) void load(); }, 30000); });
+async function resolve() { if (!detail.value) return; if (resolution.reason.trim().length < 2 || (resolution.status === 'CONFIRMED' && !resolution.messageId.trim())) { ElMessage.warning('请填写核实依据及必要的真实消息ID'); return; } resolving.value = true; try { await resolveHomeworkAttempt({ registrationId:detail.value.registrationId,id: detail.value.id, ...resolution }, lifetime.signal); if (!lifetime.signal.aborted) { resolveOpen.value = false; ElMessage.success('核实结果已记录'); await loadAudit(); await load(); } } catch (problem) { if (!lifetime.signal.aborted) resolutionError.value = homeworkError(problem); } finally { resolving.value = false; } }
+const deleteOpen = ref(false), deleting = ref(false), deleteError = ref(''), deleteConfirmation = ref('');
+const deletingUser = ref<HomeworkUser>();
+function closeDelete() { deletingUser.value = undefined; deleteConfirmation.value = ''; deleteError.value = ''; }
+function openDelete(row: HomeworkUser) { deletingUser.value = { ...row }; deleteConfirmation.value = ''; deleteError.value = ''; deleteOpen.value = true; }
+async function removeUser() {
+ const user = deletingUser.value;
+ if (!user || deleting.value || deleteConfirmation.value.trim() !== user.vvAccount) return;
+ deleting.value = true; deleteError.value = '';
+ try {
+  await deleteHomeworkUser({ registrationId:user.registrationId,id: user.id, revision: user.revision, confirmationAccount: deleteConfirmation.value.trim() }, lifetime.signal);
+  if (lifetime.signal.aborted) return;
+  deleteOpen.value = false;
+  if (detail.value?.id === user.id) { detailOpen.value = false; closeDetail(); detail.value = undefined; }
+  if (editing.value?.id === user.id) { editOpen.value = false; editing.value = undefined; }
+  if (users.value.length === 1 && query.pageNum > 1) query.pageNum--;
+  users.value = users.value.filter(row => row.id !== user.id); total.value = Math.max(0, total.value - 1);
+  ElMessage.success('该软件用户及关联数据已删除'); await load();
+ } catch (problem) { if (!lifetime.signal.aborted) deleteError.value = homeworkError(problem); }
+ finally { deleting.value = false; }
+}
+onMounted(() => { void load(); pollTimer = setInterval(() => { if (document.visibilityState === 'visible' && !loading.value && !saving.value && !editOpen.value && !deleteOpen.value && !deleting.value && !listError.value) void load(); }, 30000); });
 onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); lifetime.abort(); ++listGeneration; listController?.abort(); closeDetail(); });
 </script>
 
