@@ -1,4 +1,5 @@
 <template>
+	<div>
 	<el-card shadow="never">
 		<template #header><strong>自动作业用户</strong><span class="intro">软件账号独立于 ADS 管理员与家族账号</span></template>
 		<el-form inline :model="query" class="filters">
@@ -66,6 +67,7 @@
 	<el-dialog v-model="resolveOpen" title="核实未决记录" width="540px" :close-on-click-modal="false">
 		<el-alert v-if="resolutionError" :title="resolutionError" type="error" :closable="false" /><el-form label-position="top"><el-form-item label="记录标识"><el-input :model-value="resolution.recordId" readonly /></el-form-item><el-form-item label="核实结果"><el-select v-model="resolution.status"><el-option label="确认未发送" value="NOT_SENT" /><el-option label="已取得真实成功回执" value="CONFIRMED" /></el-select></el-form-item><el-form-item v-if="resolution.status === 'CONFIRMED'" label="真实消息ID"><el-input v-model="resolution.messageId" maxlength="512" /></el-form-item><el-form-item label="核实依据"><el-input v-model="resolution.reason" type="textarea" maxlength="500" :rows="3" /></el-form-item><el-alert title="核实不会触发消息发送。活跃的在途许可不能更正。" type="warning" :closable="false" /></el-form><template #footer><el-button @click="resolveOpen = false">取消</el-button><el-button type="primary" :loading="resolving" @click="resolve">保存核实结果</el-button></template>
 	</el-dialog>
+	</div>
 </template>
 
 <script setup lang="ts">
