@@ -7,6 +7,7 @@ export interface HomeworkUser {
 	status: number; expiresAt: string | null; dailyLimit: number; revision: number; remark: string; hasPassword: boolean;
 	softwareOnline: boolean; vvReady: boolean; createdAt: string; lastLoginAt: string; lastActiveAt: string | null; offlineAt: string | null; offlineReason: string;
 	clientVersion: string; buildId: string; ip: string; totalSuccess: number; usage: Usage; authorization: { status: string; allowed: boolean };
+	ipRegion?: string;
 }
 export interface Pending { recordId: string; workDay: string; state: string; kind: string; at: string }
 export interface Audit { id: number; actorId: number; event: string; detail: string; at: string }

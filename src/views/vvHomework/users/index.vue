@@ -50,7 +50,11 @@
 			<el-descriptions-item label="VV号">{{ detail.vvAccount }}</el-descriptions-item><el-descriptions-item label="昵称">{{ detail.nickname }}</el-descriptions-item>
 			<el-descriptions-item label="性别（VV资料）">{{ detail.sex === 1 ? '男' : detail.sex === 2 ? '女' : '未知' }}</el-descriptions-item><el-descriptions-item label="资料来源">{{ detail.profileSource }}</el-descriptions-item><el-descriptions-item label="密码">{{ detail.hasPassword ? '已加密保存' : '未保存' }} <el-button v-auth="'api/v1/system/vvHomework/user/password'" text type="primary" @click="showPassword">查看密码</el-button></el-descriptions-item>
 			<el-descriptions-item label="首次登记">{{ beijingTime(detail.createdAt) }}</el-descriptions-item><el-descriptions-item label="最近登录">{{ beijingTime(detail.lastLoginAt) }}</el-descriptions-item>
-			<el-descriptions-item label="累计成功触达人次">{{ detail.totalSuccess }}</el-descriptions-item><el-descriptions-item label="最近IP">{{ detail.ip || '—' }}</el-descriptions-item>
+			<el-descriptions-item label="累计成功触达人次">{{ detail.totalSuccess }}</el-descriptions-item>
+			<el-descriptions-item label="最近登录公网 IP">{{ detailLoaded ? detail.ip || '当时未记录公网 IP' : detailError ? '读取失败' : '正在读取' }}</el-descriptions-item>
+			<el-descriptions-item label="IP 归属地" :span="2">
+				{{ detailLoaded ? detail.ipRegion || (detail.ip ? '暂未查到归属地' : '暂无公网 IP 可查询') : detailError ? '读取失败' : '正在读取' }}
+			</el-descriptions-item>
 			<el-descriptions-item label="客户端版本">{{ detail.clientVersion || '—' }}</el-descriptions-item><el-descriptions-item label="构建ID">{{ detail.buildId || '—' }}</el-descriptions-item>
 			<el-descriptions-item label="离线时间">{{ beijingTime(detail.offlineAt) }}</el-descriptions-item><el-descriptions-item label="离线原因">{{ detail.offlineReason || '—' }}</el-descriptions-item>
 			<el-descriptions-item label="备注" :span="2">{{ detail.remark || '—' }}</el-descriptions-item>
@@ -59,7 +63,12 @@
 		<h3 class="section">未决记录</h3><p class="muted">显示最多100条。请按记录标识核对本机工作明细；未确认前保留预占，不自动重发。</p>
 		<el-table v-loading="auditLoading" :data="pending" border empty-text="没有未决记录"><el-table-column prop="recordId" label="记录标识" min-width="190" show-overflow-tooltip /><el-table-column prop="workDay" label="发送日" width="120" /><el-table-column prop="state" label="状态" width="110" /><el-table-column label="操作" width="85"><template #default="{ row }"><el-button v-auth="'api/v1/system/vvHomework/attempt/resolve'" text type="primary" @click="openResolve(row)">核实</el-button></template></el-table-column></el-table>
 		<h3 class="section">审计记录</h3><el-alert v-if="auditError" :title="auditError" type="error" :closable="false" />
-		<el-table v-loading="auditLoading" :data="audits" border><el-table-column label="时间（北京）" min-width="175"><template #default="{ row }">{{ beijingTime(row.at) }}</template></el-table-column><el-table-column prop="event" label="事件" min-width="150" /><el-table-column prop="actorId" label="操作者" width="90" /><el-table-column prop="detail" label="说明" min-width="180" show-overflow-tooltip /></el-table>
+		<el-table v-loading="auditLoading" :data="audits" border :empty-text="auditError ? '操作记录加载失败' : '暂无操作记录'">
+			<el-table-column label="时间（北京）" min-width="165"><template #default="{ row }">{{ beijingTime(row.at) }}</template></el-table-column>
+			<el-table-column label="事件" min-width="110"><template #default="{ row }">{{ auditEvents[row.event]?.[0] || '其他操作' }}</template></el-table-column>
+			<el-table-column label="操作者" min-width="135"><template #default="{ row }">{{ row.actorId === 0 ? '客户端（用户本人）' : `管理员（编号 ${row.actorId}）` }}</template></el-table-column>
+			<el-table-column label="说明" min-width="240" show-overflow-tooltip><template #default="{ row }">{{ auditDescription(row) }}</template></el-table-column>
+		</el-table>
 		<pagination v-show="auditTotal > 0" v-model:page="auditPage" :limit="20" :total="auditTotal" @pagination="loadAudit" />
 	</el-drawer>
 
@@ -78,7 +87,44 @@ defineOptions({ name: 'vvHomeworkUsers' });
 const query = reactive<UserQuery>({ keyword: '', status: '', online: '', authorization: '', pageNum: 1, pageSize: 20 });
 const users = ref<HomeworkUser[]>([]), total = ref(0), loading = ref(false), listError = ref('');
 const detail = ref<HomeworkUser>(), detailOpen = ref(false), detailError = ref(''), auditError = ref(''), auditLoading = ref(false);
+const detailLoaded = ref(false);
 const audits = ref<Audit[]>([]), pending = ref<Pending[]>([]), auditTotal = ref(0), auditPage = ref(1);
+const auditEvents: Record<string, [string, string]> = {
+	REGISTER: ['首次登记', '该账号首次使用软件，已创建软件用户记录。'],
+	LOGIN: ['登录软件', '软件账号身份验证通过。'],
+	LOGOUT: ['退出软件', '软件会话已结束。'],
+	AUTHORIZATION_UPDATE: ['修改授权', '管理员更新了授权设置。'],
+	FORCE_LOGOUT: ['强制下线', '管理员结束了软件会话。已发送消息仍可结算回执。'],
+	PASSWORD_VIEW: ['查看密码', '管理员查看了该账号保存的密码。'],
+	ATTEMPT_RESOLVE: ['核实发送结果', '管理员核实并更新了发送结果。'],
+	CODE_REDEEM: ['兑换授权码', '用户使用授权码延长了授权。'],
+	CODE_REVEAL: ['查看授权码', '用户查看了已兑换的授权码。'],
+};
+
+function auditDescription(row: Audit) {
+	const detail = row.detail?.trim() || '';
+	if (row.event === 'LOGOUT' && detail === 'EXIT') return '用户正常退出软件。';
+	if (row.event === 'AUTHORIZATION_UPDATE') {
+		const fields = detail.match(/^revision=\d+ dailyLimit=(\d+) expiresMs=(\d+) status=([01])$/);
+		if (fields) {
+			const [, limit, expiresMs, status] = fields;
+			const expires = new Date(Number(expiresMs));
+			if (Number.isFinite(expires.getTime())) {
+				const expiration = Number(expiresMs) === 0 ? '未设置到期时间' : `到期时间为 ${beijingTime(expires.toISOString())}（北京）`;
+				return `账号${status === '1' ? '启用' : '停用'}，每日上限 ${limit} 人，${expiration}。`;
+			}
+		}
+	}
+	if (row.event === 'ATTEMPT_RESOLVE') {
+		const fields = detail.match(/^\S+ (CONFIRMED|NOT_SENT) ([\s\S]+)$/);
+		if (fields) return `确认${fields[1] === 'CONFIRMED' ? '已发送' : '未发送'}。核实依据为「${fields[2]}」。`;
+	}
+	if (row.event === 'CODE_REDEEM') {
+		const days = detail.match(/\bdays=(\d+)\b/)?.[1];
+		if (days) return `用户兑换授权码，授权延长 ${days} 天。`;
+	}
+	return auditEvents[row.event]?.[1] || '暂无可读说明。';
+}
 const editOpen = ref(false), editing = ref<HomeworkUser>(), saving = ref(false), editDate = ref('');
 const edit = reactive({ dailyLimit: 200, status: 1, remark: '' });
 const passwordOpen = ref(false), passwordLoading = ref(false), password = ref('');
@@ -93,9 +139,9 @@ function reset() { Object.assign(query, { keyword: '', status: '', online: '', a
 function openEdit(u: HomeworkUser) { editError.value = ''; editing.value = u; Object.assign(edit, { dailyLimit: u.dailyLimit, status: u.status, remark: u.remark }); editDate.value = u.expiresAt ? beijingTime(u.expiresAt) : ''; editOpen.value = true; }
 async function saveEdit() { if (!editing.value) return; if (!Number.isInteger(edit.dailyLimit)) { ElMessage.warning('请填写每日上限'); return; } const date = editDate.value ? new Date(editDate.value.replace(' ', 'T') + '+08:00') : null; if (date && Number.isNaN(date.getTime())) { ElMessage.warning('请填写有效的北京时间'); return; } const expiresAt = date ? date.toISOString() : null; saving.value = true; editError.value = ''; try { await saveHomeworkAuthorization({ registrationId:editing.value.registrationId,id: editing.value.id, revision: editing.value.revision, expiresAt, ...edit }, lifetime.signal); if (!lifetime.signal.aborted) { editOpen.value = false; ElMessage.success('授权已保存'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) editError.value = homeworkError(problem); } finally { saving.value = false; } }
 async function toggle(u: HomeworkUser) { try { await setHomeworkStatus(u, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success(u.status ? '账号已停用' : '账号已启用'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) listError.value = homeworkError(problem); } }
-async function openDetail(u: HomeworkUser) { closeDetail(); detailOpen.value = true; detail.value = u; auditPage.value = 1; const generation = ++detailGeneration; detailController = new AbortController(); void loadAudit(); try { const res = await getHomeworkUser(u.id, detailController.signal); if (generation === detailGeneration && detailOpen.value) detail.value = res.data; } catch { if (generation === detailGeneration && detailOpen.value) detailError.value = '详情加载失败，可关闭后重新打开。'; } }
+async function openDetail(u: HomeworkUser) { closeDetail(); detailOpen.value = true; detail.value = u; auditPage.value = 1; const generation = ++detailGeneration; detailController = new AbortController(); void loadAudit(); try { const res = await getHomeworkUser(u.id, detailController.signal); if (generation === detailGeneration && detailOpen.value) { detail.value = res.data; detailLoaded.value = true; } } catch { if (generation === detailGeneration && detailOpen.value) detailError.value = '详情加载失败，可关闭后重新打开。'; } }
 async function loadAudit() { if (!detail.value) return; const id = detail.value.id, generation = ++auditGeneration; auditController?.abort(); auditController = new AbortController(); auditLoading.value = true; auditError.value = ''; try { const res = await getHomeworkAudit(id, auditPage.value, auditController.signal); if (generation === auditGeneration && detail.value?.id === id) { audits.value = res.data.list; pending.value = res.data.pending; auditTotal.value = res.data.total; } } catch { if (generation === auditGeneration && detailOpen.value) auditError.value = '审计加载失败，可重新打开详情重试。'; } finally { if (generation === auditGeneration) auditLoading.value = false; } }
-function closeDetail() { ++detailGeneration; ++auditGeneration; detailController?.abort(); auditController?.abort(); detailError.value = ''; auditError.value = ''; audits.value = []; pending.value = []; auditTotal.value = 0; clearPassword(); }
+function closeDetail() { ++detailGeneration; ++auditGeneration; detailController?.abort(); auditController?.abort(); detailLoaded.value = false; detailError.value = ''; auditError.value = ''; audits.value = []; pending.value = []; auditTotal.value = 0; clearPassword(); }
 async function forceLogout() { if (!detail.value) return; try { await logoutHomeworkUser(detail.value, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success('已停止该软件会话的新派发'); detailOpen.value = false; await load(); } } catch (problem) { if (!lifetime.signal.aborted) detailError.value = homeworkError(problem); } }
 function clearPassword() { passwordController?.abort(); password.value = ''; passwordError.value = ''; if (passwordTimer) clearTimeout(passwordTimer); passwordTimer = undefined; passwordOpen.value = false; }
 async function showPassword() { if (!detail.value) return; clearPassword(); passwordController = new AbortController(); const controller = passwordController; passwordOpen.value = true; passwordLoading.value = true; try { const res = await viewHomeworkPassword(detail.value.id, controller.signal,detail.value.registrationId); if (!controller.signal.aborted && passwordOpen.value) { password.value = res.data.password; passwordTimer = setTimeout(clearPassword, 30000); } } catch (problem) { if (!controller.signal.aborted && passwordOpen.value) passwordError.value = homeworkError(problem); } finally { passwordLoading.value = false; } }
