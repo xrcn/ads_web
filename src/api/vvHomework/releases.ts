@@ -1,0 +1,10 @@
+import request from '/@/utils/request';
+export interface ReleaseEntry { policyProtocol?: number; sequence: number; version: string; notes: string; size: number; sha256: string; status: 'READY' | 'PUBLISHED' | 'WITHDRAWN'; uploadedAt: string; uploadedBy: number; publishedAt?: string; publishedBy?: number; withdrawnAt?: string; withdrawnBy?: number }
+export interface UpdatePolicy { mode: 'manual' | 'automatic' | 'mandatory'; minimumBuild: number; effectiveAt: number; reason: string }
+export interface ReleaseCatalog { active: number; highest: number; entries: ReleaseEntry[]; policy?: UpdatePolicy; policyRevision?: number; policyHistory?: { revision: number; actor: number; at: string; policy: UpdatePolicy }[] }
+interface Response<T> { code: number; message: string; data: T }
+const prefix = '/api/v1/system/vvHomework/release';
+export const getReleases = (signal: AbortSignal) => request({ url: prefix + '/list', signal, __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<{ catalog: ReleaseCatalog; publicKey: string; publicBase: string; maxUploadBytes: number }>>;
+export const uploadRelease = (file: File, notes: string, signal: AbortSignal, progress: (loaded: number, total: number) => void) => request({ url: prefix + '/upload', method: 'post', params: { notes }, data: file, headers: { 'Content-Type': 'application/zip' }, signal, timeout: 180000, onUploadProgress: (e) => progress(e.loaded, e.total || file.size), __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<ReleaseEntry>>;
+export const changeRelease = (action: 'publish' | 'withdraw', sequence: number, signal: AbortSignal) => request({ url: prefix + '/' + action, method: 'post', data: { sequence }, signal, __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<{ ok: boolean }>>;
+export const saveReleasePolicy = (data: UpdatePolicy & { revision: number; confirmRelaxation: boolean }, signal: AbortSignal) => request({ url: prefix + '/policy', method: 'post', data, signal, __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<{ ok: boolean }>>;
