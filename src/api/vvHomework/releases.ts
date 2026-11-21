@@ -1,6 +1,6 @@
 import request from '/@/utils/request';
 export interface ReleaseEntry { policyProtocol?: number; sequence: number; version: string; notes: string; size: number; sha256: string; status: 'READY' | 'PUBLISHED' | 'WITHDRAWN'; uploadedAt: string; uploadedBy: number; publishedAt?: string; publishedBy?: number; withdrawnAt?: string; withdrawnBy?: number }
-export interface UpdatePolicy { mode: 'manual' | 'automatic' | 'mandatory'; minimumBuild: number; effectiveAt: number; reason: string }
+export interface UpdatePolicy { mode: 'manual' | 'auto_download' | 'automatic' | 'mandatory'; minimumBuild: number; effectiveAt: number; reason: string }
 export interface ReleaseCatalog { active: number; highest: number; entries: ReleaseEntry[]; policy?: UpdatePolicy; policyRevision?: number; policyHistory?: { revision: number; actor: number; at: string; policy: UpdatePolicy }[] }
 interface Response<T> { code: number; message: string; data: T }
 const prefix = '/api/v1/system/vvHomework/release';

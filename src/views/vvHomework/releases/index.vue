@@ -6,9 +6,9 @@
   <div v-if="loaded" class="summary"><el-tag :type="catalog.active ? 'success' : 'info'">{{ catalog.active ? `当前发布 build ${catalog.active}` : '暂无对外发布版本' }}</el-tag><span>最高已发布 build：{{ catalog.highest || '—' }}</span><a :href="publicBase + '/index.json'" target="_blank" rel="noopener noreferrer">查看公开签名索引</a></div>
   <section v-if="loaded" class="policy-panel">
    <h3>客户端更新策略</h3>
-   <el-alert :title="policySupported ? '自动更新：下载后在作业结束且无未保存编辑时重启。强制更新：生效后旧版禁止新派发，已有回执仍可结算。' : '当前发布包未声明策略支持；请先以手动方式发布支持策略的兼容客户端。'" type="info" :closable="false" />
+   <el-alert :title="policySupported ? '自动下载，手动重启：完成校验后，用户正常退出并再次打开时使用新版。空闲重启会等待作业和编辑完成。强制更新生效后，旧版停止新派发，已有回执仍可结算。' : '当前发布包未声明策略支持；请先以手动方式发布支持策略的兼容客户端。'" type="info" :closable="false" />
    <el-form label-position="top" :disabled="changing || uploading" @input="policyDirty = true" @change="policyDirty = true">
-    <el-form-item label="更新方式"><el-select v-model="policy.mode" aria-label="客户端更新方式" @change="policy.mode === 'mandatory' && policy.minimumBuild === 0 && (policy.minimumBuild = catalog.active)"><el-option label="手动更新" value="manual" /><el-option label="自动下载，空闲重启" value="automatic" :disabled="!policySupported" /><el-option label="强制更新" value="mandatory" :disabled="!policySupported" /></el-select></el-form-item>
+    <el-form-item label="更新方式"><el-select v-model="policy.mode" aria-label="客户端更新方式" @change="policy.mode === 'mandatory' && policy.minimumBuild === 0 && (policy.minimumBuild = catalog.active)"><el-option label="手动更新" value="manual" /><el-option label="自动下载，手动重启" value="auto_download" :disabled="!autoDownloadSupported" /><el-option label="自动下载，空闲重启" value="automatic" :disabled="!policySupported" /><el-option label="强制更新" value="mandatory" :disabled="!policySupported" /></el-select><span v-if="!autoDownloadSupported" class="hint">发布支持后台下载的客户端后，可选择「自动下载，手动重启」。</span></el-form-item>
     <template v-if="policy.mode === 'mandatory'">
      <el-form-item label="最低允许作业 build"><el-input-number v-model="policy.minimumBuild" :min="1" :max="catalog.active" :precision="0" :controls="false" /></el-form-item>
      <el-form-item label="生效时间"><el-checkbox v-model="scheduled">定时生效（不选为立即生效）</el-checkbox><el-date-picker v-if="scheduled" v-model="policy.effectiveAt" type="datetime" value-format="x" placeholder="选择生效时间" /><span class="hint">界面按本机时区输入；保存后由服务端时间判定。</span></el-form-item>
@@ -27,7 +27,7 @@
   </el-form>
   <el-table v-loading="loading" :data="catalog.entries" row-key="sequence" empty-text="暂无版本，请上传完整程序ZIP">
    <el-table-column label="版本 / build" min-width="175"><template #default="{ row }"><strong>{{ row.version }}</strong><div>{{ row.sequence }}</div></template></el-table-column>
-   <el-table-column label="状态" width="130"><template #default="{ row }"><el-tag :type="row.sequence === catalog.active ? 'success' : 'info'">{{ row.sequence === catalog.active ? '当前发布' : statusNames[row.status] }}</el-tag><div class="hint">{{ row.policyProtocol === 1 ? '支持更新策略' : '仅手动更新' }}</div></template></el-table-column>
+   <el-table-column label="状态" width="130"><template #default="{ row }"><el-tag :type="row.sequence === catalog.active ? 'success' : 'info'">{{ row.sequence === catalog.active ? '当前发布' : statusNames[row.status] }}</el-tag><div class="hint">{{ row.policyProtocol === 2 ? '支持后台下载' : row.policyProtocol === 1 ? '支持更新策略' : '仅手动更新' }}</div></template></el-table-column>
    <el-table-column prop="notes" label="更新说明" min-width="240" show-overflow-tooltip />
    <el-table-column label="大小" width="100"><template #default="{ row }">{{ (row.size / 1024 / 1024).toFixed(2) }} MiB</template></el-table-column>
    <el-table-column label="上传时间 / 人员" min-width="180"><template #default="{ row }">{{ beijingTime(row.uploadedAt) }}<div>管理员 #{{ row.uploadedBy }}</div></template></el-table-column>
@@ -46,7 +46,9 @@ defineOptions({ name: 'vvHomeworkReleases' });
 const catalog = ref<ReleaseCatalog>({ active: 0, highest: 0, entries: [] });
 const policy = reactive({ mode: 'manual' as UpdatePolicy['mode'], minimumBuild: 0, effectiveAt: 0 as number | string, reason: '', revision: 0 });
 const scheduled = ref(false), policyDirty = ref(false);
-const policySupported = computed(() => catalog.value.entries.some(row => row.sequence === catalog.value.active && row.policyProtocol === 1));
+const activePolicyProtocol = computed(() => catalog.value.entries.find(row => row.sequence === catalog.value.active && row.status === 'PUBLISHED')?.policyProtocol);
+const policySupported = computed(() => activePolicyProtocol.value === 1 || activePolicyProtocol.value === 2);
+const autoDownloadSupported = computed(() => activePolicyProtocol.value === 2);
 function applyPolicy() { Object.assign(policy, catalog.value.policy || { mode: 'manual', minimumBuild: 0, effectiveAt: 0, reason: '' }); policy.revision = catalog.value.policyRevision || 0; scheduled.value = Number(policy.effectiveAt) > 0; }
 async function reloadPolicy() { policyDirty.value = false; await load(); }
 async function savePolicy() {
