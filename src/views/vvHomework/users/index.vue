@@ -10,15 +10,16 @@
 			<el-form-item><el-button type="primary" @click="search">查询</el-button><el-button @click="reset">重置</el-button></el-form-item>
 		</el-form>
 		<el-alert v-if="listError" :title="listError" type="error" :closable="false" class="error" />
-		<el-table v-loading="loading" :data="users" border stripe empty-text="暂无软件用户，用户通过 VV 身份校验后会自动登记。">
-			<el-table-column label="用户" min-width="230" fixed><template #default="{ row }"><div class="identity"><el-avatar :src="row.avatarUrl" :size="38">VV</el-avatar><div><strong>{{ row.vvAccount }}</strong><div class="muted">{{ row.nickname || '昵称未获取' }}</div></div></div></template></el-table-column>
-			<el-table-column label="性别" width="85"><template #default="{ row }">{{ row.sex === 1 ? '男' : row.sex === 2 ? '女' : '未知' }}</template></el-table-column>
-			<el-table-column label="授权" width="95"><template #default="{ row }"><el-tag :type="row.authorization.status === 'VALID' ? 'success' : 'warning'">{{ authorizationNames[row.authorization.status] }}</el-tag></template></el-table-column>
-			<el-table-column label="到期时间（北京）" min-width="185"><template #default="{ row }">{{ beijingTime(row.expiresAt) }}</template></el-table-column>
-			<el-table-column label="今日成功 / 日限" width="140"><template #default="{ row }">{{ row.usage.confirmed }} / {{ row.dailyLimit }}</template></el-table-column>
-			<el-table-column label="预占 / 剩余" width="120"><template #default="{ row }">{{ row.usage.reserved }} / {{ row.usage.remaining }}</template></el-table-column>
-			<el-table-column label="软件 / VV" width="150"><template #default="{ row }"><el-tag :type="row.softwareOnline ? 'success' : 'info'">{{ row.softwareOnline ? '在线' : '离线' }}</el-tag><div class="muted">VV {{ row.vvReady ? '已连接' : '未连接' }}</div></template></el-table-column>
-			<el-table-column label="最近活跃（北京）" min-width="185"><template #default="{ row }">{{ beijingTime(row.lastActiveAt) }}</template></el-table-column>
+		<el-table ref="usersTable" v-loading="loading" :data="users" border stripe @sort-change="handleSortChange" empty-text="暂无软件用户，用户通过 VV 身份校验后会自动登记。">
+			<el-table-column prop="vvAccount" label="用户" sortable="custom" min-width="230" fixed><template #default="{ row }"><div class="identity"><el-avatar :src="row.avatarUrl" :size="38">VV</el-avatar><div><strong>{{ row.vvAccount }}</strong><div class="muted">{{ row.nickname || '昵称未获取' }}</div></div></div></template></el-table-column>
+			<el-table-column prop="sex" label="性别" sortable="custom" width="85"><template #default="{ row }">{{ row.sex === 1 ? '男' : row.sex === 2 ? '女' : '未知' }}</template></el-table-column>
+			<el-table-column prop="authorization" label="授权" sortable="custom" width="95"><template #default="{ row }"><el-tag :type="row.authorization.status === 'VALID' ? 'success' : 'warning'">{{ authorizationNames[row.authorization.status] }}</el-tag></template></el-table-column>
+			<el-table-column prop="expiresAt" label="到期时间（北京）" sortable="custom" min-width="185"><template #default="{ row }">{{ beijingTime(row.expiresAt) }}</template></el-table-column>
+			<el-table-column prop="confirmed" label="今日成功 / 日限" sortable="custom" width="140"><template #default="{ row }">{{ row.usage.confirmed }} / {{ row.dailyLimit }}</template></el-table-column>
+			<el-table-column prop="reserved" label="预占 / 剩余" sortable="custom" width="120"><template #default="{ row }">{{ row.usage.reserved }} / {{ row.usage.remaining }}</template></el-table-column>
+			<el-table-column prop="softwareOnline" label="软件 / VV" sortable="custom" width="150"><template #default="{ row }"><el-tag :type="row.softwareOnline ? 'success' : 'info'">{{ row.softwareOnline ? '在线' : '离线' }}</el-tag><div class="muted">VV {{ row.vvReady ? '已连接' : '未连接' }}</div></template></el-table-column>
+			<el-table-column prop="lastActiveAt" label="最近活跃（北京）" sortable="custom" min-width="185"><template #default="{ row }">{{ beijingTime(row.lastActiveAt) }}</template></el-table-column>
+			<el-table-column prop="buildId" label="上报 build" sortable="custom" min-width="205"><template #default="{ row }">{{ row.buildId || '未上报' }}</template></el-table-column>
 			<el-table-column label="操作" width="300" fixed="right"><template #default="{ row }"><el-button text @click="openDetail(row)">详情</el-button><el-button v-auth="'api/v1/system/vvHomework/user/authorization'" text type="primary" @click="openEdit(row)">授权</el-button><el-button v-auth="'api/v1/system/vvHomework/user/status'" text @click="toggle(row)">{{ row.status ? '停用' : '启用' }}</el-button><el-button v-auth="'api/v1/system/vvHomework/user/delete'" text type="danger" :disabled="row.softwareOnline" :title="row.softwareOnline ? '请先在详情中强制下线' : '彻底删除此用户'" @click="openDelete(row)">删除</el-button></template></el-table-column>
 		</el-table>
 		<pagination v-show="total > 0" v-model:page="query.pageNum" v-model:limit="query.pageSize" :total="total" @pagination="load" />
@@ -81,9 +82,10 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, type TableInstance } from 'element-plus';
 import { deleteHomeworkUser, authorizationNames, beijingTime, homeworkError, listHomeworkUsers, getHomeworkUser, getHomeworkAudit, saveHomeworkAuthorization, setHomeworkStatus, logoutHomeworkUser, viewHomeworkPassword, resolveHomeworkAttempt, type HomeworkUser, type UserQuery, type Pending, type Audit } from '/@/api/vvHomework';
 defineOptions({ name: 'vvHomeworkUsers' });
+const usersTable = ref<TableInstance>();
 const query = reactive<UserQuery>({ keyword: '', status: '', online: '', authorization: '', pageNum: 1, pageSize: 20 });
 const users = ref<HomeworkUser[]>([]), total = ref(0), loading = ref(false), listError = ref('');
 const detail = ref<HomeworkUser>(), detailOpen = ref(false), detailError = ref(''), auditError = ref(''), auditLoading = ref(false);
@@ -169,7 +171,18 @@ const editError = ref(''), passwordError = ref(''), resolutionError = ref('');
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 async function load() { const generation = ++listGeneration; listController?.abort(); listController = new AbortController(); loading.value = true; listError.value = ''; try { const res = await listHomeworkUsers({ ...query }, listController.signal); if (generation === listGeneration && !lifetime.signal.aborted) { users.value = res.data.list ?? []; total.value = res.data.total; } } catch { if (generation === listGeneration && !lifetime.signal.aborted) listError.value = '用户加载失败，请检查权限或连接后重试。'; } finally { if (generation === listGeneration) loading.value = false; } }
 function search() { query.pageNum = 1; void load(); }
-function reset() { Object.assign(query, { keyword: '', status: '', online: '', authorization: '', pageNum: 1 }); void load(); }
+function reset() {
+	Object.assign(query, { keyword: '', status: '', online: '', authorization: '', pageNum: 1, sortBy: '', sortOrder: '' });
+	usersTable.value?.clearSort();
+	void load();
+}
+function handleSortChange({ prop, order }: { prop?: string; order: 'ascending' | 'descending' | null }) {
+	const sortBy = order ? prop || '' : '';
+	const sortOrder = sortBy ? order || '' : '';
+	if ((query.sortBy || '') === sortBy && (query.sortOrder || '') === sortOrder) return;
+	Object.assign(query, { sortBy, sortOrder });
+	search();
+}
 function openEdit(u: HomeworkUser) { editError.value = ''; editing.value = u; Object.assign(edit, { dailyLimit: u.dailyLimit, status: u.status, remark: u.remark }); editDate.value = u.expiresAt ? beijingTime(u.expiresAt) : ''; editOpen.value = true; }
 async function saveEdit() { if (!editing.value) return; if (!Number.isInteger(edit.dailyLimit)) { ElMessage.warning('请填写每日上限'); return; } const date = editDate.value ? new Date(editDate.value.replace(' ', 'T') + '+08:00') : null; if (date && Number.isNaN(date.getTime())) { ElMessage.warning('请填写有效的北京时间'); return; } const expiresAt = date ? date.toISOString() : null; saving.value = true; editError.value = ''; try { await saveHomeworkAuthorization({ registrationId:editing.value.registrationId,id: editing.value.id, revision: editing.value.revision, expiresAt, ...edit }, lifetime.signal); if (!lifetime.signal.aborted) { editOpen.value = false; ElMessage.success('授权已保存'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) editError.value = homeworkError(problem); } finally { saving.value = false; } }
 async function toggle(u: HomeworkUser) { try { await setHomeworkStatus(u, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success(u.status ? '账号已停用' : '账号已启用'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) listError.value = homeworkError(problem); } }

@@ -12,7 +12,7 @@ export interface HomeworkUser {
 export interface Pending { recordId: string; workDay: string; state: string; kind: string; at: string }
 export interface Audit { id: number; actorId: number; event: string; detail: string; at: string }
 interface Response<T> { code: number; message: string; data: T }
-export interface UserQuery { keyword: string; status: string; online: string; authorization: string; pageNum: number; pageSize: number }
+export interface UserQuery { keyword: string; status: string; online: string; authorization: string; pageNum: number; pageSize: number; sortBy?: string; sortOrder?: 'ascending' | 'descending' | '' }
 const prefix = '/api/v1/system/vvHomework';
 const get = <T>(path: string, params: object, signal?: AbortSignal) => request({ url: prefix + path, method: 'get', params, signal, __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<T>>;
 const write = <T>(path: string, method: 'put' | 'post', data: object, signal?: AbortSignal) => request({ url: prefix + path, method, data, signal, __skipGlobalErrorMessage: true } as any) as unknown as Promise<Response<T>>;
