@@ -94,6 +94,8 @@ const auditEvents: Record<string, [string, string]> = {
 	LOGIN: ['登录软件', '软件账号身份验证通过。'],
 	LOGOUT: ['退出软件', '软件会话已结束。'],
 	AUTHORIZATION_UPDATE: ['修改授权', '管理员更新了授权设置。'],
+	AUTHORIZATION_TRANSFER_OUT: ['授权转出', '已记录授权转出，详情暂不可读。'],
+	AUTHORIZATION_TRANSFER_IN: ['授权转入', '已记录授权转入，详情暂不可读。'],
 	FORCE_LOGOUT: ['强制下线', '管理员结束了软件会话。已发送消息仍可结算回执。'],
 	PASSWORD_VIEW: ['查看密码', '管理员查看了该账号保存的密码。'],
 	ATTEMPT_RESOLVE: ['核实发送结果', '管理员核实并更新了发送结果。'],
@@ -101,9 +103,41 @@ const auditEvents: Record<string, [string, string]> = {
 	CODE_REVEAL: ['查看授权码', '用户查看了已兑换的授权码。'],
 };
 
+function transferAuditDescription(detail: string) {
+	const payload = detail.match(/^[a-f0-9]{32} ([\s\S]+)$/)?.[1];
+	if (!payload) return;
+	let receipt: Record<string, unknown> | undefined;
+	try {
+		receipt = JSON.parse(payload)?.receipt;
+	} catch {
+		return;
+	}
+	const { sourceAccount, targetAccount, remainingMillis, targetExpiresAt } = receipt ?? {};
+	if (
+		typeof sourceAccount !== 'string' || !/^\d+$/.test(sourceAccount) ||
+		typeof targetAccount !== 'string' || !/^\d+$/.test(targetAccount) ||
+		typeof remainingMillis !== 'number' || !Number.isSafeInteger(remainingMillis) || remainingMillis <= 0 ||
+		typeof targetExpiresAt !== 'string' || !Number.isFinite(Date.parse(targetExpiresAt))
+	) return;
+
+	const seconds = Math.floor(remainingMillis / 1000);
+	const units = [
+		{ amount: Math.floor(seconds / 86400), label: '天' },
+		{ amount: Math.floor(seconds / 3600) % 24, label: '小时' },
+		{ amount: Math.floor(seconds / 60) % 60, label: '分' },
+		{ amount: seconds % 60, label: '秒' },
+	];
+	const duration = units.filter(({ amount }) => amount > 0).map(({ amount, label }) => `${amount} ${label}`).join(' ');
+	const transfer = duration ? `转移 ${duration}` : '转移不足 1 秒';
+	return `转出方 VV 号 ${sourceAccount}，接收方 VV 号 ${targetAccount}。${transfer}，接收方授权到期时间为 ${beijingTime(targetExpiresAt)}（北京时间）。`;
+}
+
 function auditDescription(row: Audit) {
 	const detail = row.detail?.trim() || '';
 	if (row.event === 'LOGOUT' && detail === 'EXIT') return '用户正常退出软件。';
+	if (row.event === 'AUTHORIZATION_TRANSFER_OUT' || row.event === 'AUTHORIZATION_TRANSFER_IN') {
+		return transferAuditDescription(detail) ?? auditEvents[row.event][1];
+	}
 	if (row.event === 'AUTHORIZATION_UPDATE') {
 		const fields = detail.match(/^revision=\d+ dailyLimit=(\d+) expiresMs=(\d+) status=([01])$/);
 		if (fields) {
