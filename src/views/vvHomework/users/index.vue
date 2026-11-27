@@ -61,6 +61,10 @@
 			<el-descriptions-item label="备注" :span="2">{{ detail.remark || '—' }}</el-descriptions-item>
 		</el-descriptions>
 		<el-button v-if="detail" v-auth="'api/v1/system/vvHomework/user/logout'" class="section" type="warning" plain @click="forceLogout">强制软件下线</el-button>
+		<div v-if="detail" v-auth="'api/v1/system/vvHomework/user/reconnect'" class="section">
+			<el-button :disabled="!detailLoaded || !detail.vvReconnect?.canRequest" :loading="reconnectBusy" plain @click="requestVVReconnect">帮用户重连 VV</el-button>
+			<span class="muted" role="status">{{ vvReconnectStatusText(detail.vvReconnect) }}</span>
+		</div>
 		<h3 class="section">未决记录</h3><p class="muted">显示最多100条。请按记录标识核对本机工作明细；未确认前保留预占，不自动重发。</p>
 		<el-table v-loading="auditLoading" :data="pending" border empty-text="没有未决记录"><el-table-column prop="recordId" label="记录标识" min-width="190" show-overflow-tooltip /><el-table-column prop="workDay" label="发送日" width="120" /><el-table-column prop="state" label="状态" width="110" /><el-table-column label="操作" width="85"><template #default="{ row }"><el-button v-auth="'api/v1/system/vvHomework/attempt/resolve'" text type="primary" @click="openResolve(row)">核实</el-button></template></el-table-column></el-table>
 		<h3 class="section">审计记录</h3><el-alert v-if="auditError" :title="auditError" type="error" :closable="false" />
@@ -83,7 +87,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import { ElMessage, type TableInstance } from 'element-plus';
-import { deleteHomeworkUser, authorizationNames, beijingTime, homeworkError, listHomeworkUsers, getHomeworkUser, getHomeworkAudit, saveHomeworkAuthorization, setHomeworkStatus, logoutHomeworkUser, viewHomeworkPassword, resolveHomeworkAttempt, type HomeworkUser, type UserQuery, type Pending, type Audit } from '/@/api/vvHomework';
+import { deleteHomeworkUser, authorizationNames, beijingTime, homeworkError, listHomeworkUsers, getHomeworkUser, getHomeworkAudit, saveHomeworkAuthorization, setHomeworkStatus, logoutHomeworkUser, requestHomeworkVVReconnect, viewHomeworkPassword, resolveHomeworkAttempt, type HomeworkUser, type UserQuery, type Pending, type Audit, type VVReconnectStatus } from '/@/api/vvHomework';
 defineOptions({ name: 'vvHomeworkUsers' });
 const usersTable = ref<TableInstance>();
 const query = reactive<UserQuery>({ keyword: '', status: '', online: '', authorization: '', pageNum: 1, pageSize: 20 });
@@ -103,7 +107,72 @@ const auditEvents: Record<string, [string, string]> = {
 	ATTEMPT_RESOLVE: ['核实发送结果', '管理员核实并更新了发送结果。'],
 	CODE_REDEEM: ['兑换授权码', '用户使用授权码延长了授权。'],
 	CODE_REVEAL: ['查看授权码', '用户查看了已兑换的授权码。'],
+	VV_DISCONNECTED: ['VV 断线', '客户端检测到 VV 连接失效。'],
+	VV_RECONNECT_STARTED: ['VV 开始重连', '客户端开始核对并尝试恢复 VV 连接。'],
+	VV_RECONNECT_SUCCEEDED: ['VV 重连成功', '客户端已恢复 VV 连接。'],
+	VV_RECONNECT_FAILED: ['VV 重连失败', '客户端尝试恢复 VV 连接失败。'],
+	VV_RECONNECT_SKIPPED: ['VV 未执行重连', '客户端未满足重连条件。'],
+	VV_ADMIN_RECONNECT_REQUESTED: ['管理员请求 VV 重连', '请求已提交，等待用户的小助手处理。'],
+	VV_ADMIN_RECONNECT_CLAIMED: ['小助手已接收重连请求', '小助手已接收请求，将按在线状态判断。'],
+	VV_ADMIN_RECONNECT_RESULT: ['管理员重连结果', '小助手已上报处理结果。'],
 };
+
+const vvConnectionReasons: Record<string, string> = {
+	GATEWAY_HEARTBEAT_FAILED: 'VV 网关心跳失败',
+	IM_SESSION_INVALIDATED: 'IM 会话失效',
+	IM_TRANSPORT_CLOSED: 'IM 连接中断',
+	LOCAL_MESSAGE_STATE_ERROR: '本机消息记录同步或保存失败',
+	UNKNOWN: '断线原因尚未确认',
+	MANUAL_REQUEST: '用户在小助手点击重新连接',
+	NETWORK_TRANSIENT: '确认发生短时网络故障',
+	VV_CONNECTED: 'VV 连接已恢复',
+	PASSWORD_REJECTED: 'VV 密码认证失败',
+	VERIFICATION_REQUIRED: '需要完成 VV 验证',
+	ACCOUNT_IN_USE: '账号已被占用',
+	BACKEND_UNAVAILABLE: '作业后台暂不可用',
+	CONNECTION_TIMEOUT: 'VV 连接超时',
+	CONNECT_FAILED: 'VV 连接失败，原因未确认',
+	PASSWORD_REQUIRED: '需要用户输入 VV 密码',
+	PRESENCE_ONLINE: 'VV 账号已在线',
+	PRESENCE_UNKNOWN: '无法确认 VV 在线状态',
+	SAFE_LOGIN_UNAVAILABLE: '尚未验证安全重连方式',
+	NETWORK_NOT_CONFIRMED: '未确认是短时网络故障',
+	NOT_ALLOWED: '当前软件会话不符合重连条件',
+};
+
+function vvConnectionAuditDescription(detail: string) {
+	const payload = detail.match(/^[a-f0-9]{32} ([\s\S]+)$/)?.[1];
+	if (!payload) return;
+	try {
+		const record: { occurredAt?: unknown; reason?: unknown } = JSON.parse(payload);
+		const { occurredAt, reason } = record;
+		if (typeof occurredAt !== 'string' || !Number.isFinite(Date.parse(occurredAt)) || typeof reason !== 'string' ||
+			!Object.hasOwn(vvConnectionReasons, reason)) return;
+		return `${vvConnectionReasons[reason]}。检测或操作时间 ${beijingTime(occurredAt)}（北京时间）。`;
+	} catch {
+		return;
+	}
+}
+
+function vvReconnectStatusText(status?: VVReconnectStatus) {
+	if (!status) return '尚未取得重连状态';
+	switch (status.status) {
+		case 'AVAILABLE': return '可向当前小助手会话发出请求';
+		case 'OFFLINE': return '小助手离线';
+		case 'UNSUPPORTED': return '当前小助手尚未报告重连支持';
+		case 'NOT_ALLOWED': return '当前授权不符合重连条件';
+		case 'VV_READY': return 'VV 已连接';
+		case 'QUEUED': return '已提交，等待小助手接收';
+		case 'CLAIMED': return '小助手正在核对 VV 在线状态';
+		case 'EXPIRED': return '请求已超时，未取得客户端结果';
+		case 'SUCCEEDED': return 'VV 重连成功';
+		case 'BLOCKED':
+		case 'FAILED': {
+			const reason = status.reason;
+			return reason && Object.hasOwn(vvConnectionReasons, reason) ? vvConnectionReasons[reason] : '无法确认重连结果';
+		}
+	}
+}
 
 function transferAuditDescription(detail: string) {
 	const payload = detail.match(/^[a-f0-9]{32} ([\s\S]+)$/)?.[1];
@@ -136,6 +205,13 @@ function transferAuditDescription(detail: string) {
 
 function auditDescription(row: Audit) {
 	const detail = row.detail?.trim() || '';
+	if (row.event === 'VV_ADMIN_RECONNECT_RESULT') {
+		const reason = detail.match(/^[a-f0-9]{64} [A-Za-z0-9_-]{43} ([A-Z_]+)$/)?.[1];
+		return reason && Object.hasOwn(vvConnectionReasons, reason) ? vvConnectionReasons[reason] : auditEvents[row.event][1];
+	}
+	if (row.event.startsWith('VV_') && Object.hasOwn(auditEvents, row.event)) {
+		return vvConnectionAuditDescription(detail) ?? auditEvents[row.event][1];
+	}
 	if (row.event === 'LOGOUT' && detail === 'EXIT') return '用户正常退出软件。';
 	if (row.event === 'AUTHORIZATION_TRANSFER_OUT' || row.event === 'AUTHORIZATION_TRANSFER_IN') {
 		return transferAuditDescription(detail) ?? auditEvents[row.event][1];
@@ -169,6 +245,8 @@ let listGeneration = 0, detailGeneration = 0, auditGeneration = 0, listControlle
 const lifetime = new AbortController();
 const editError = ref(''), passwordError = ref(''), resolutionError = ref('');
 let pollTimer: ReturnType<typeof setInterval> | undefined;
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+const reconnectBusy = ref(false);
 async function load() { const generation = ++listGeneration; listController?.abort(); listController = new AbortController(); loading.value = true; listError.value = ''; try { const res = await listHomeworkUsers({ ...query }, listController.signal); if (generation === listGeneration && !lifetime.signal.aborted) { users.value = res.data.list ?? []; total.value = res.data.total; } } catch { if (generation === listGeneration && !lifetime.signal.aborted) listError.value = '用户加载失败，请检查权限或连接后重试。'; } finally { if (generation === listGeneration) loading.value = false; } }
 function search() { query.pageNum = 1; void load(); }
 function reset() {
@@ -186,9 +264,60 @@ function handleSortChange({ prop, order }: { prop?: string; order: 'ascending' |
 function openEdit(u: HomeworkUser) { editError.value = ''; editing.value = u; Object.assign(edit, { dailyLimit: u.dailyLimit, status: u.status, remark: u.remark }); editDate.value = u.expiresAt ? beijingTime(u.expiresAt) : ''; editOpen.value = true; }
 async function saveEdit() { if (!editing.value) return; if (!Number.isInteger(edit.dailyLimit)) { ElMessage.warning('请填写每日上限'); return; } const date = editDate.value ? new Date(editDate.value.replace(' ', 'T') + '+08:00') : null; if (date && Number.isNaN(date.getTime())) { ElMessage.warning('请填写有效的北京时间'); return; } const expiresAt = date ? date.toISOString() : null; saving.value = true; editError.value = ''; try { await saveHomeworkAuthorization({ registrationId:editing.value.registrationId,id: editing.value.id, revision: editing.value.revision, expiresAt, ...edit }, lifetime.signal); if (!lifetime.signal.aborted) { editOpen.value = false; ElMessage.success('授权已保存'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) editError.value = homeworkError(problem); } finally { saving.value = false; } }
 async function toggle(u: HomeworkUser) { try { await setHomeworkStatus(u, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success(u.status ? '账号已停用' : '账号已启用'); await load(); } } catch (problem) { if (!lifetime.signal.aborted) listError.value = homeworkError(problem); } }
-async function openDetail(u: HomeworkUser) { closeDetail(); detailOpen.value = true; detail.value = u; auditPage.value = 1; const generation = ++detailGeneration; detailController = new AbortController(); void loadAudit(); try { const res = await getHomeworkUser(u.id, detailController.signal); if (generation === detailGeneration && detailOpen.value) { detail.value = res.data; detailLoaded.value = true; } } catch { if (generation === detailGeneration && detailOpen.value) detailError.value = '详情加载失败，可关闭后重新打开。'; } }
+async function openDetail(u: HomeworkUser) { closeDetail(); detailOpen.value = true; detail.value = u; auditPage.value = 1; const generation = ++detailGeneration; detailController = new AbortController(); void loadAudit(); try { const res = await getHomeworkUser(u.id, detailController.signal); if (generation === detailGeneration && detailOpen.value) { detail.value = res.data; detailLoaded.value = true; scheduleVVReconnectRefresh(); } } catch { if (generation === detailGeneration && detailOpen.value) detailError.value = '详情加载失败，可关闭后重新打开。'; } }
 async function loadAudit() { if (!detail.value) return; const id = detail.value.id, generation = ++auditGeneration; auditController?.abort(); auditController = new AbortController(); auditLoading.value = true; auditError.value = ''; try { const res = await getHomeworkAudit(id, auditPage.value, auditController.signal); if (generation === auditGeneration && detail.value?.id === id) { audits.value = res.data.list; pending.value = res.data.pending; auditTotal.value = res.data.total; } } catch { if (generation === auditGeneration && detailOpen.value) auditError.value = '审计加载失败，可重新打开详情重试。'; } finally { if (generation === auditGeneration) auditLoading.value = false; } }
-function closeDetail() { ++detailGeneration; ++auditGeneration; detailController?.abort(); auditController?.abort(); detailLoaded.value = false; detailError.value = ''; auditError.value = ''; audits.value = []; pending.value = []; auditTotal.value = 0; clearPassword(); }
+function closeDetail() { ++detailGeneration; ++auditGeneration; detailController?.abort(); auditController?.abort(); clearTimeout(reconnectTimer); reconnectBusy.value = false; detailLoaded.value = false; detailError.value = ''; auditError.value = ''; audits.value = []; pending.value = []; auditTotal.value = 0; clearPassword(); }
+
+function scheduleVVReconnectRefresh() {
+	clearTimeout(reconnectTimer);
+	const status = detail.value?.vvReconnect;
+	if (!detailOpen.value || !status) return;
+	const waiting = status.status === 'QUEUED' || status.status === 'CLAIMED';
+	const untilExpiry = Date.parse(status.expiresAt || '') - Date.now();
+	if (waiting || !status.canRequest && untilExpiry > 0) {
+		reconnectTimer = setTimeout(() => void refreshVVReconnect(), waiting ? 2500 : untilExpiry + 250);
+	}
+}
+
+async function refreshVVReconnect() {
+	const selected = detail.value;
+	const generation = detailGeneration;
+	if (!selected || !detailOpen.value) return;
+	try {
+		const res = await getHomeworkUser(selected.id, detailController?.signal);
+		if (generation !== detailGeneration || !detailOpen.value) return;
+		detail.value = res.data;
+		if (selected.vvReconnect?.status !== res.data.vvReconnect?.status) void loadAudit();
+		scheduleVVReconnectRefresh();
+	} catch {
+		if (generation === detailGeneration && detailOpen.value) detailError.value = '重连状态读取失败，可关闭后重新打开详情核对。';
+	}
+}
+
+async function requestVVReconnect() {
+	const selected = detail.value;
+	const generation = detailGeneration;
+	const status = selected?.vvReconnect;
+	if (!selected || !status?.canRequest || !status.sessionKey || reconnectBusy.value) return;
+	reconnectBusy.value = true;
+	detailError.value = '';
+	clearTimeout(reconnectTimer);
+	try {
+		const res = await requestHomeworkVVReconnect(selected, status.sessionKey, detailController?.signal);
+		if (generation !== detailGeneration || !detailOpen.value) return;
+		detail.value = { ...selected, vvReconnect: res.data };
+		auditPage.value = 1;
+		void loadAudit();
+		scheduleVVReconnectRefresh();
+	} catch (problem) {
+		if (generation === detailGeneration && detailOpen.value) {
+			detailError.value = homeworkError(problem);
+			void refreshVVReconnect();
+		}
+	} finally {
+		if (generation === detailGeneration) reconnectBusy.value = false;
+	}
+}
 async function forceLogout() { if (!detail.value) return; try { await logoutHomeworkUser(detail.value, lifetime.signal); if (!lifetime.signal.aborted) { ElMessage.success('已停止该软件会话的新派发'); detailOpen.value = false; await load(); } } catch (problem) { if (!lifetime.signal.aborted) detailError.value = homeworkError(problem); } }
 function clearPassword() { passwordController?.abort(); password.value = ''; passwordError.value = ''; if (passwordTimer) clearTimeout(passwordTimer); passwordTimer = undefined; passwordOpen.value = false; }
 async function showPassword() { if (!detail.value) return; clearPassword(); passwordController = new AbortController(); const controller = passwordController; passwordOpen.value = true; passwordLoading.value = true; try { const res = await viewHomeworkPassword(detail.value.id, controller.signal,detail.value.registrationId); if (!controller.signal.aborted && passwordOpen.value) { password.value = res.data.password; passwordTimer = setTimeout(clearPassword, 30000); } } catch (problem) { if (!controller.signal.aborted && passwordOpen.value) passwordError.value = homeworkError(problem); } finally { passwordLoading.value = false; } }

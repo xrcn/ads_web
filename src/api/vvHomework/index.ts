@@ -2,12 +2,18 @@ import request from '/@/utils/request';
 
 export interface HomeworkConfig { allowRegistration: boolean; autoGrant: boolean; durationHours: number; dailyLimit: number; revision: number; description: string }
 export interface Usage { day: string; confirmed: number; reserved: number; remaining: number }
+export interface VVReconnectStatus {
+	sessionKey?: string; requestId?: string; expiresAt?: string; reason?: string; actorId?: number; canRequest: boolean;
+	status: 'AVAILABLE' | 'OFFLINE' | 'UNSUPPORTED' | 'NOT_ALLOWED' | 'VV_READY' |
+		'QUEUED' | 'CLAIMED' | 'EXPIRED' | 'BLOCKED' | 'FAILED' | 'SUCCEEDED';
+}
 export interface HomeworkUser {
 	id: number; registrationId: string; sex: number | null; vvAccount: string; nickname: string; avatarUrl: string; virtualRoleSex: number | null; profileSource: string;
 	status: number; expiresAt: string | null; dailyLimit: number; revision: number; remark: string; hasPassword: boolean;
 	softwareOnline: boolean; vvReady: boolean; createdAt: string; lastLoginAt: string; lastActiveAt: string | null; offlineAt: string | null; offlineReason: string;
 	clientVersion: string; buildId: string; ip: string; totalSuccess: number; usage: Usage; authorization: { status: string; allowed: boolean };
 	ipRegion?: string;
+	vvReconnect?: VVReconnectStatus;
 }
 export interface Pending { recordId: string; workDay: string; state: string; kind: string; at: string }
 export interface Audit { id: number; actorId: number; event: string; detail: string; at: string }
@@ -24,6 +30,8 @@ export const getHomeworkAudit = (id: number, pageNum: number, signal?: AbortSign
 export const saveHomeworkAuthorization = (data: Pick<HomeworkUser, 'registrationId' | 'id' | 'revision' | 'status' | 'expiresAt' | 'dailyLimit' | 'remark'>, signal?: AbortSignal) => write('/user/authorization', 'put', data, signal);
 export const setHomeworkStatus = (u: HomeworkUser, signal?: AbortSignal) => write('/user/status', 'put', { registrationId: u.registrationId, id: u.id, revision: u.revision, status: u.status ? 0 : 1 }, signal);
 export const logoutHomeworkUser = (u: HomeworkUser, signal?: AbortSignal) => write('/user/logout', 'post', { registrationId: u.registrationId, id: u.id, revision: u.revision }, signal);
+export const requestHomeworkVVReconnect = (u: HomeworkUser, sessionKey: string, signal?: AbortSignal) =>
+	write<VVReconnectStatus>('/user/reconnect', 'post', { registrationId: u.registrationId, id: u.id, revision: u.revision, sessionKey }, signal);
 export const viewHomeworkPassword = (id: number, signal?: AbortSignal, registrationId?: string) => write<{ password: string }>('/user/password', 'post', { id,registrationId }, signal);
 export const resolveHomeworkAttempt = (data: { registrationId: string; id: number; recordId: string; status: string; messageId: string; reason: string }, signal?: AbortSignal) => write('/attempt/resolve', 'post', data, signal);
 
